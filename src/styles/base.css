@@ -1,0 +1,130 @@
+:root {
+  font-family: Inter, 'Microsoft YaHei', sans-serif;
+  color: #dce4ef;
+  background: #0c111a;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #182334;
+  color: #e2e8f0;
+  padding: 10px 16px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+aside {
+  width: 240px;
+  padding: 28px 20px;
+  background: #111827;
+  border-right: 1px solid #243045;
+}
+h1 {
+  font-size: 27px;
+  color: #bda4ff;
+}
+h1 span {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-top: 8px;
+}
+nav {
+  display: grid;
+  gap: 8px;
+  margin: 36px 0;
+}
+nav button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+}
+nav .active {
+  background: #362b53;
+  color: #d7c4ff;
+}
+aside small {
+  color: #94a3b8;
+  line-height: 1.8;
+}
+main {
+  flex: 1;
+  padding: 36px;
+  max-width: 1300px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+header p {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #94a3b8;
+}
+h2 {
+  font-size: 28px;
+  margin: 8px 0;
+}
+.badge {
+  padding: 7px 12px;
+  border-radius: 20px;
+  background: #283424;
+  color: #b4d7a1;
+  font-size: 12px;
+}
+section {
+  background: #131c29;
+  border: 1px solid #283447;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+h3 {
+  margin-top: 0;
+}
+p {
+  line-height: 1.8;
+}
+.muted {
+  color: #94a3b8;
+}
+@media (max-width: 700px) {
+  .layout {
+    display: block;
+  }
+  aside {
+    width: 100%;
+  }
+  nav {
+    display: flex;
+    overflow: auto;
+    margin: 15px 0;
+  }
+  nav button {
+    white-space: nowrap;
+  }
+  main {
+    padding: 20px;
+  }
+}
