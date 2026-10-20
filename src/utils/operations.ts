@@ -7,11 +7,11 @@ import {
 export function validNames(names: LocalizedText) {
   return !!names.en.trim() && locales.every((locale) => names[locale].length <= 200);
 }
-export function validPeriod(start: string | null, end: string | null) {
+export function validPeriod(start: number | null, end: number | null) {
   return (
-    (!start || (/^\d{4}-\d{2}-\d{2}T/.test(start) && Number.isFinite(Date.parse(start)))) &&
-    (!end || (/^\d{4}-\d{2}-\d{2}T/.test(end) && Number.isFinite(Date.parse(end)))) &&
-    (!start || !end || Date.parse(start) < Date.parse(end))
+    (start === null || Number.isSafeInteger(start)) &&
+    (end === null || Number.isSafeInteger(end)) &&
+    (start === null || end === null || start < end)
   );
 }
 const integer = (value: number, min: number, max: number) =>

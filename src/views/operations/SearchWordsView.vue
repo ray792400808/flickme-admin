@@ -40,10 +40,10 @@ function edit(row?: SearchWord) {
   editorError.value = '';
   e.edit(row);
 }
-function date(value: string | null) {
-  if (!value) return '';
-  const d = new Date(value);
-  return Number.isFinite(d.getTime()) ? d.toLocaleString('sv-SE').slice(0, 16) : value;
+function date(value: number | null) {
+  if (value == null) return '';
+  const d = new Date(value * 1000);
+  return Number.isFinite(d.getTime()) ? d.toLocaleString('sv-SE').slice(0, 16) : '';
 }
 async function save(published: boolean) {
   if (!c.editable) return;
@@ -108,6 +108,7 @@ async function publish() {
       @search="list.resetPage"
       @page="list.changePage"
       ><template #word="{ row }">{{ row.names.en }}</template
+      ><template #sort="{ row }"><span class="mono">{{ row.sort }}</span></template
       ><template #period="{ row }"
         ><span class="mono">{{ date(row.starts_at) }} → {{ date(row.ends_at) }}</span></template
       ><template #enabled="{ row }"

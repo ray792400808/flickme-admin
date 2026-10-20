@@ -15,21 +15,37 @@ const props = withDefaults(
 const emit = defineEmits<{ close: [] }>();
 const dialog = ref<HTMLDialogElement>();
 let previousFocus: HTMLElement | null = null;
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
 watch(
   () => props.open,
   async (open) => {
     await nextTick();
+    const element = dialog.value;
     if (open) {
+      clearTimeout(closeTimer);
+      element?.classList.remove('closing');
       previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      dialog.value?.showModal();
+      element?.showModal();
     } else {
-      dialog.value?.close();
-      previousFocus?.focus();
+      if (!element || !element.open) {
+        previousFocus?.focus();
+        return;
+      }
+      element.classList.add('closing');
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => {
+        element.classList.remove('closing');
+        element.close();
+        previousFocus?.focus();
+      }, 200);
     }
   },
   { immediate: true },
 );
-onBeforeUnmount(() => dialog.value?.close());
+onBeforeUnmount(() => {
+  clearTimeout(closeTimer);
+  dialog.value?.close();
+});
 </script>
 <template>
   <Teleport to="body"
@@ -40,7 +56,7 @@ onBeforeUnmount(() => dialog.value?.close());
       :aria-label="title"
       :aria-busy="busy"
       @cancel.prevent="!busy && emit('close')"
-      @click="
+      @mousedown="
         (event) => {
           if (event.target === dialog && !busy) emit('close');
         }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-const model = defineModel<string | null>({ required: true });
+const model = defineModel<number | null>({ required: true });
 defineProps<{ label: string; disabled?: boolean }>();
 const value = computed(() => {
-  if (!model.value) return '';
-  const d = new Date(model.value);
-  if (!Number.isFinite(d.getTime())) return model.value;
+  if (model.value == null) return '';
+  const d = new Date(model.value * 1000);
+  if (!Number.isFinite(d.getTime())) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
     d.getFullYear() +
@@ -38,12 +38,11 @@ function change(event: Event) {
       date.getHours() === h &&
       date.getMinutes() === min
     ) {
-      model.value = date.toISOString();
+      model.value = Math.floor(date.getTime() / 1000);
       return;
     }
   }
   input.setCustomValidity('请输入有效的 YYYY-MM-DD HH:mm 时间');
-  model.value = 'invalid:' + text;
 }
 </script>
 <template>

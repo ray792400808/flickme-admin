@@ -26,7 +26,7 @@ export interface CoinAdjustmentInput {
 }
 export interface CoinAdjustment extends CoinAdjustmentInput {
   id: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected';
   requester_id: number;
   requester_name: string;
   reviewer_name: string | null;

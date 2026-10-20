@@ -1201,7 +1201,8 @@
   color: var(--muted);
 }
 .op-drawer {
-  transform: none;
+  transform: translateX(0);
+  transition: transform 0.2s;
   width: 480px;
   max-width: 100vw;
   height: 100dvh;
@@ -1217,6 +1218,35 @@
 }
 .op-drawer[open] {
   display: flex;
+  animation: op-drawer-in 0.2s ease;
+}
+.op-drawer.closing {
+  transform: translateX(102%);
+}
+.op-drawer::backdrop {
+  transition: opacity 0.15s;
+}
+.op-drawer[open]::backdrop {
+  animation: op-backdrop-in 0.15s ease;
+}
+.op-drawer.closing::backdrop {
+  opacity: 0;
+}
+@keyframes op-drawer-in {
+  from {
+    transform: translateX(102%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes op-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .op-drawer .dh {
   margin: 0;

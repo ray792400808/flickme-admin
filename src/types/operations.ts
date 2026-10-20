@@ -18,8 +18,8 @@ export interface HomeCategory {
   names: LocalizedText;
   enabled: boolean;
   locked: boolean;
-  starts_at: string | null;
-  ends_at: string | null;
+  starts_at: number | null;
+  ends_at: number | null;
 }
 export interface HotPoolItem {
   drama_id: number;
@@ -46,8 +46,8 @@ export interface SearchWord {
   id: string;
   names: LocalizedText;
   enabled: boolean;
-  starts_at: string | null;
-  ends_at: string | null;
+  starts_at: number | null;
+  ends_at: number | null;
   sort: number;
   status: 'draft' | 'published';
 }

@@ -9,6 +9,12 @@
 
 ## 当前边界
 
+### 最新后端同步（2026-10-20）
+
+当前后端为 `D:\tv_api`（容器 tv_api），以其 `apifox-admin-api.yaml` 为准，旧 `D:\tv_pro\app` 的检查结论不适用于本批接口。金币页已移除保存草稿与 PATCH 更新；创建仅发送 uid/currency/amount/reason，列表按 uid 查询，提交成功只表示 pending，不改本地余额。三个生产接口开关继续关闭。
+
+尚待真实登录联调；未执行真实金币创建或审批。另发现运营配置字段差异：后端不接受 words.sort/status、filters.order、recs.description，且不返回 published 快照或 options.dramas。此部分尚未完成适配，不得标记全量接口验收通过。
+
 ### 运营位与用户管理增量
 
 首页分类、热门池与排序、启动弹窗、搜索推荐词、Stories 筛选标签、推荐位配置、用户列表、金币调整已从通用占位页替换为独立 Vue 页面。增加 typed API、版本化草稿/发布、分页详情、状态变更及二人审批交互；不增加仓储抽象，不使用原型渲染器。

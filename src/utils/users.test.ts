@@ -5,7 +5,7 @@ describe('coin adjustment checks', () => {
   it('requires a UID, reason and nonzero safe integer amount', () => {
     const valid = { uid: '000123', currency: 'bonus' as const, amount: -10, reason: '纠错' };
     expect(validateCoinAdjustment(valid)).toBe('');
-    for (const amount of [0, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN])
+    for (const amount of [0, 1.5, 1000001, -1000001, Number.MAX_SAFE_INTEGER + 1, NaN])
       expect(validateCoinAdjustment({ ...valid, amount })).not.toBe('');
     expect(validateCoinAdjustment({ ...valid, reason: ' ' })).not.toBe('');
   });

@@ -11,7 +11,7 @@ import { useAuthStore } from '../../stores/auth';
 import { canReviewAdjustment, validateCoinAdjustment } from '../../utils/users';
 import type { CoinAdjustment, CoinAdjustmentInput } from '../../types/users';
 const auth = useAuthStore(),
-  filters = reactive({ q: '', status: '' });
+  filters = reactive({ uid: '', status: '' });
 const list = reactive(usePagedList(coinsEnabled, coinAdjustmentsApi.list, filters));
 const writable = computed(() => coinsEnabled && auth.can('users', true));
 const open = ref(false),
@@ -34,15 +34,10 @@ let key = '',
   snapshot = '',
   leaveResolve: ((value: boolean) => void) | undefined,
   timer: ReturnType<typeof setTimeout> | undefined;
-const editable = computed(
-  () =>
-    writable.value &&
-    (!selected.value ||
-      (selected.value.status === 'draft' && selected.value.requester_id === auth.user?.id)),
-);
+const editable = computed(() => writable.value && !selected.value);
 const frozen = computed(() => busy.value || !!submittedPayload.value || !editable.value);
 const dirty = computed(() => open.value && editable.value && JSON.stringify(form) !== snapshot);
-const statusNames = { draft: '草稿', pending: '待审批', approved: '已发布', rejected: '驳回' };
+const statusNames = { pending: '待审批', approved: '已发布', rejected: '驳回' };
 const columns = [
   { key: 'uid', label: 'UID' },
   { key: 'currency', label: '币种' },
@@ -77,12 +72,12 @@ function close() {
   if (dirty.value) discard.value = true;
   else open.value = false;
 }
-async function submit(submitForReview: boolean) {
+async function submit() {
   if (!editable.value || busy.value) return;
   error.value = validateCoinAdjustment(form);
   if (error.value) return;
   const input = { ...form, uid: form.uid.trim(), reason: form.reason.trim() },
-    payload = JSON.stringify({ ...input, submit: submitForReview });
+    payload = JSON.stringify(input);
   if (submittedPayload.value && submittedPayload.value !== payload) {
     error.value = '请使用原请求重试，避免重复提交';
     return;
@@ -91,11 +86,9 @@ async function submit(submitForReview: boolean) {
   key ||= crypto.randomUUID();
   busy.value = true;
   try {
-    if (selected.value)
-      await coinAdjustmentsApi.update(selected.value, input, key, submitForReview);
-    else await coinAdjustmentsApi.create(input, key, submitForReview);
+    await coinAdjustmentsApi.create(input, key);
     open.value = false;
-    notify(submitForReview ? '已提交,等待第二位管理员审批' : '已保存为草稿');
+    notify('已提交,等待第二位管理员审批');
     await list.reload();
   } catch (cause) {
     if (
@@ -175,7 +168,7 @@ onBeforeUnmount(() => {
     <p v-if="error && !open && !reviewing" class="banner warn" role="alert">{{ error }}</p>
     <div v-if="message" class="toast on" role="status">{{ message }}</div>
     <ReferenceTable
-      v-model:search="filters.q"
+      v-model:search="filters.uid"
       :columns="columns"
       :rows="list.rows"
       :total="list.total"
@@ -251,7 +244,7 @@ onBeforeUnmount(() => {
       :busy="busy"
       @close="close"
       ><div v-if="editable" class="banner">此对象的发布需要另一位管理员审批。</div>
-      <form id="coin-form" class="op-form" @submit.prevent="submit(true)">
+      <form id="coin-form" class="op-form" @submit.prevent="submit()">
         <div class="fld">
           <label>用户 UID</label
           ><input v-model="form.uid" class="in" aria-label="用户 UID" :readonly="frozen" required />
@@ -291,7 +284,6 @@ onBeforeUnmount(() => {
       <template #footer
         ><template v-if="editable"
           ><button class="btn" :disabled="busy" @click="close">取消</button
-          ><button class="btn" :disabled="busy" @click="submit(false)">保存草稿</button
           ><button class="btn pri" form="coin-form" :disabled="busy">提交审批</button></template
         ><button v-else class="btn" @click="close">关闭</button></template
       ></FormDrawer

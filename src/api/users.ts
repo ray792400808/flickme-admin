@@ -15,20 +15,8 @@ export const usersApi = {
 export const coinAdjustmentsApi = {
   list: (params: URLSearchParams) =>
     requestApi<PageResult<CoinAdjustment>>(`/coin-adjustments?${params}`),
-  create: (input: CoinAdjustmentInput, key: string, submit = true) =>
-    requestApi<CoinAdjustment>(
-      '/coin-adjustments',
-      'POST',
-      { ...input, submit },
-      { 'Idempotency-Key': key },
-    ),
-  update: (row: CoinAdjustment, input: CoinAdjustmentInput, key: string, submit: boolean) =>
-    requestApi<CoinAdjustment>(
-      '/coin-adjustments/' + encodeURIComponent(row.id),
-      'PATCH',
-      { ...input, version: row.version, submit },
-      { 'Idempotency-Key': key },
-    ),
+  create: (input: CoinAdjustmentInput, key: string) =>
+    requestApi<CoinAdjustment>('/coin-adjustments', 'POST', input, { 'Idempotency-Key': key }),
   review: (
     adjustment: CoinAdjustment,
     decision: 'approve' | 'reject',

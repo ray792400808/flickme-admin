@@ -21,9 +21,9 @@ describe('operations publication validation', () => {
     moveItem(rows, 1, -1, 1);
     expect(rows[0]).toBe(locked);
   });
-  it('compares actual instants rather than date strings with different offsets', () => {
-    expect(validPeriod('2026-10-20T12:00:00+08:00', '2026-10-20T05:00:00Z')).toBe(true);
-    expect(validPeriod('2026-10-20T12:00:00+08:00', '2026-10-20T03:00:00Z')).toBe(false);
+  it('compares unix-second instants rather than local strings', () => {
+    expect(validPeriod(1792468800, 1792472400)).toBe(true);
+    expect(validPeriod(1792468800, 1792465200)).toBe(false);
   });
   it('rejects mutually exclusive ranking flags and fractional counts', () => {
     const hot = {

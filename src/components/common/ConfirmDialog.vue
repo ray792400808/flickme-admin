@@ -29,7 +29,7 @@ watch(
       ref="dialog"
       class="confirm-dialog"
       @cancel.prevent="!busy && emit('cancel')"
-      @click="
+      @mousedown="
         (event) => {
           if (event.target === dialog && !busy) emit('cancel');
         }

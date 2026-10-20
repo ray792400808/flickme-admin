@@ -157,6 +157,7 @@ await page.route('**/admin/v1/**', async (route) => {
   }
   if (path === '/coin-adjustments' && method === 'GET') return ok(paged(adjustments));
   if (path === '/coin-adjustments' && method === 'POST') {
+    assert.deepEqual(Object.keys(request.postDataJSON()).sort(), ['amount','currency','reason','uid']);
     creationKeys.push(request.headers()['idempotency-key']);
     if (failCreation) {
       failCreation = false;
@@ -230,6 +231,7 @@ try {
     .click();
   await page.getByText('已批准', { exact: true }).waitFor();
   await page.getByRole('button', { name: '发起调整', exact: true }).click();
+  assert.equal(await page.locator('.op-drawer[open]').getByRole('button',{name:'保存草稿',exact:true}).count(),0);
   await page.getByLabel('用户 UID', { exact: true }).fill('000123');
   await page.getByLabel('变动数量', { exact: true }).fill('-10');
   await page.getByLabel('原因(必填)', { exact: true }).fill('补偿核对');
