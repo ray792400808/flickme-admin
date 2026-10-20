@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-const props = withDefaults(defineProps<{ open: boolean; title: string; busy?: boolean }>(), {
-  busy: false,
-});
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    title: string;
+    busy?: boolean;
+    reference?: boolean;
+    subtitle?: string;
+  }>(),
+  {
+    busy: false,
+  },
+);
 const emit = defineEmits<{ close: [] }>();
 const dialog = ref<HTMLDialogElement>();
 let previousFocus: HTMLElement | null = null;
@@ -27,6 +36,7 @@ onBeforeUnmount(() => dialog.value?.close());
     ><dialog
       ref="dialog"
       class="native-drawer"
+      :class="{ 'op-drawer': reference }"
       :aria-label="title"
       :aria-busy="busy"
       @cancel.prevent="!busy && emit('close')"
@@ -36,11 +46,23 @@ onBeforeUnmount(() => dialog.value?.close());
         }
       "
     >
-      <div class="native-drawer-heading">
-        <h2>{{ title }}</h2>
-        <button :disabled="busy" aria-label="关闭编辑抽屉" @click="emit('close')">×</button>
+      <div class="native-drawer-heading" :class="{ dh: reference }">
+        <div>
+          <h2>{{ title }}</h2>
+          <p v-if="subtitle">{{ subtitle }}</p>
+        </div>
+        <button
+          :class="{ ic: reference }"
+          :disabled="busy"
+          aria-label="关闭编辑抽屉"
+          @click="emit('close')"
+        >
+          ×
+        </button>
       </div>
-      <div class="native-drawer-body"><slot /></div>
-      <footer class="native-drawer-footer"><slot name="footer" /></footer></dialog
+      <div class="native-drawer-body" :class="{ db: reference }"><slot /></div>
+      <footer class="native-drawer-footer" :class="{ df: reference }">
+        <slot name="footer" />
+      </footer></dialog
   ></Teleport>
 </template>

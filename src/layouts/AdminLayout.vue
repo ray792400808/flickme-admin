@@ -3,6 +3,8 @@ import { computed, onMounted, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { getHealth } from '../api/system';
+import { operationsEnabled } from '../api/operations';
+import { usersEnabled, coinsEnabled } from '../api/users';
 import {
   icons,
   menuGroups,
@@ -74,7 +76,12 @@ const notice = computed(() =>
     ? '开发原型参考：使用独立示例数据，所有业务操作均为本地模拟。'
     : isLive.value
       ? '正式工作区：数据以服务端实际返回为准。'
-      : '开发中：此模块尚未接入业务接口，写操作暂不可用。',
+      : (['chips', 'hot', 'launch', 'words', 'filters', 'recs'].includes(current.value) &&
+            operationsEnabled) ||
+          (current.value === 'userlist' && usersEnabled) ||
+          (current.value === 'coinadj' && coinsEnabled)
+        ? '业务接口已启用，数据及操作结果以服务端返回为准。'
+        : '开发中：此模块尚未接入业务接口，写操作暂不可用。',
 );
 function link(id: string) {
   return props.preview ? '/preview/' + id : pathFor(id);

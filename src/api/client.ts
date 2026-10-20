@@ -16,12 +16,18 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
-export async function requestApi<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export async function requestApi<T>(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  extraHeaders: Record<string, string> = {},
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/admin/v1'}${path}`, {
       method,
       headers: {
+        ...extraHeaders,
         Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),

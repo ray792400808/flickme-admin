@@ -5,6 +5,92 @@
   align-items: center;
   flex-wrap: wrap;
 }
+.config-card {
+  margin: 16px 0;
+}
+.config-card > h2 {
+  margin-bottom: 12px;
+}
+.config-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+  border: 0;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.config-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.config-fields input:not([type='checkbox']),
+.config-fields select {
+  width: 100%;
+}
+.config-fields .checkbox-field {
+  flex-direction: row;
+  align-items: center;
+}
+.config-fields input[type='checkbox'],
+.pool-row input {
+  width: auto;
+}
+.config-fields:disabled {
+  opacity: 0.6;
+}
+.config-row-heading,
+.pool-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pool-row {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.pool-row span {
+  flex: 1;
+}
+.locale-tabs,
+.channel-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.locale-tabs button {
+  padding: 4px 7px;
+  font-size: 11px;
+}
+.config-status {
+  margin-bottom: 18px;
+}
+.config-status .page-actions {
+  margin-top: 12px;
+}
+.integration-notice {
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  padding: 12px 14px;
+  margin: 12px 0;
+  border-radius: 8px;
+}
+.detail-list {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+}
+.detail-list dt {
+  color: var(--muted);
+}
+.detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .state-panel {
   padding: 30px 20px;
   text-align: center;

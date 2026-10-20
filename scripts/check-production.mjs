@@ -37,7 +37,14 @@ try {
             email: 'tester@example.test',
             name: '验收管理员',
             role: 'admin',
-            permissions: { overview: 'r', content: 'rw', system: 'rw', commerce: 'rw' },
+            permissions: {
+              overview: 'r',
+              content: 'rw',
+              system: 'rw',
+              commerce: 'rw',
+              ops: 'rw',
+              users: 'rw',
+            },
           },
         },
       });
@@ -77,6 +84,40 @@ try {
   assert.equal(await guest.getByRole('link', { name: /原型/ }).count(), 0);
   await guest.close();
   await page.setViewportSize({ width: 390, height: 844 });
+  for (const [id, title] of Object.entries({
+    chips: '首页分类 Chips',
+    hot: '热门池与排序',
+    launch: '启动弹窗',
+    words: '搜索推荐词',
+    filters: 'Stories 筛选标签',
+    recs: '推荐位配置',
+    userlist: '用户列表',
+    coinadj: '金币调整',
+  })) {
+    await page.goto(`${base}/#/${id}`);
+    await page.getByRole('heading', { name: title, exact: true }).waitFor();
+    const action = {
+      chips: '新增分类',
+      hot: '发布',
+      launch: '发布',
+      words: '新增推荐词',
+      filters: '新增分组',
+    }[id];
+    if (action)
+      assert.equal(
+        await page.getByRole('button', { name: action, exact: true }).isDisabled(),
+        true,
+      );
+    if (id === 'coinadj')
+      assert.equal(
+        await page.getByRole('button', { name: '发起调整', exact: true }).isDisabled(),
+        true,
+      );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+    );
+  }
   await page.goto(`${base}/#/dramas`);
   await page.getByRole('heading', { name: 'Short 剧库', exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

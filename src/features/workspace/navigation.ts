@@ -24,7 +24,7 @@ export const menuGroups: MenuGroup[] = [
     title: '运营位',
     icon: 'grid',
     pages: [
-      ['chips', '首页分类 Chips'],
+      ['chips', '首页分类'],
       ['hot', '热门池与排序'],
       ['launch', '启动弹窗'],
       ['words', '搜索推荐词'],

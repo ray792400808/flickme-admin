@@ -7,6 +7,7 @@ const props = defineProps<{
   requireReason?: boolean;
   confirmLabel?: string;
   busy?: boolean;
+  error?: string;
 }>();
 const emit = defineEmits<{ confirm: [reason: string]; cancel: [] }>();
 const dialog = ref<HTMLDialogElement>();
@@ -37,6 +38,7 @@ watch(
       <form @submit.prevent="!busy && emit('confirm', reason.trim())">
         <h2>{{ title }}</h2>
         <p>{{ message }}</p>
+        <p v-if="error" class="form-error" role="alert">{{ error }}</p>
         <label v-if="requireReason"
           >原因<textarea
             v-model="reason"

@@ -2,6 +2,16 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { pinia } from '../stores';
 import { menuGroups, pathFor, permissionFor } from '../features/workspace/navigation';
+const modulePages: Record<string, () => Promise<unknown>> = {
+  chips: () => import('../views/operations/HomeCategoriesView.vue'),
+  hot: () => import('../views/operations/HotPoolView.vue'),
+  launch: () => import('../views/operations/LaunchPopupView.vue'),
+  words: () => import('../views/operations/SearchWordsView.vue'),
+  filters: () => import('../views/operations/StoryFiltersView.vue'),
+  recs: () => import('../views/operations/RecommendationsView.vue'),
+  userlist: () => import('../views/users/UserListView.vue'),
+  coinadj: () => import('../views/users/CoinAdjustmentsView.vue'),
+};
 const workspace = () => import('../views/workspace/WorkspaceView.vue');
 const pendingModule = () => import('../views/system/ModulePendingView.vue');
 export const router = createRouter({
@@ -61,12 +71,16 @@ export const router = createRouter({
                 ? () => import('../views/dramas/DramaListView.vue')
                 : id === 'overview'
                   ? () => import('../views/dashboard/OverviewView.vue')
-                  : pendingModule,
+                  : modulePages[id] || pendingModule,
             meta: {
               title,
               permission: permissionFor(id),
               implementation:
-                id === 'dramas' ? 'awaiting-api' : id === 'overview' ? 'live' : 'planned',
+                id === 'dramas' || modulePages[id]
+                  ? 'awaiting-api'
+                  : id === 'overview'
+                    ? 'live'
+                    : 'planned',
             },
           })),
         {

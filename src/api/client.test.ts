@@ -6,6 +6,21 @@ afterEach(() => {
   onUnauthorized(() => {});
 });
 describe('API client', () => {
+  it('sends an idempotency header without overriding authentication', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { id: '1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    setAccessToken('real-token');
+    await requestApi(
+      '/coin-adjustments',
+      'POST',
+      { amount: 1 },
+      { 'Idempotency-Key': 'stable-key', Authorization: 'wrong' },
+    );
+    expect(fetchMock.mock.calls[0]?.[1].headers).toMatchObject({
+      'Idempotency-Key': 'stable-key',
+      Authorization: 'Bearer real-token',
+    });
+  });
   it('unwraps data and sends the current bearer token', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { status: 'ok' } }));
     vi.stubGlobal('fetch', fetchMock);

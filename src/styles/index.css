@@ -3,6 +3,7 @@
 @import './workspace.css';
 @import './shell.css';
 @import './components.css';
+@import './operations-reference.css';
 
 .invitation {
   margin-bottom: 20px;
