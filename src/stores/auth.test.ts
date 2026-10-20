@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { authApi } from '../api/auth';
 import { useAuthStore } from './auth';
-import { useContentStore } from './content';
 vi.mock('../api/auth', () => ({ authApi: { login: vi.fn(), me: vi.fn(), logout: vi.fn() } }));
 beforeEach(() => {
   setActivePinia(createPinia());
@@ -22,7 +21,7 @@ describe('authentication lifecycle', () => {
     );
     expect(auth.authenticated).toBe(false);
   });
-  it('clears user and content when logout succeeds', async () => {
+  it('clears the authenticated user when logout succeeds', async () => {
     const user = { email: 'admin@example.com', role: 'bootstrap-admin' };
     vi.mocked(authApi.login).mockResolvedValue({
       accessToken: 'test',
@@ -34,10 +33,8 @@ describe('authentication lifecycle', () => {
     const auth = useAuthStore();
     await auth.login({ email: user.email, password: 'secret' });
     expect(auth.authenticated).toBe(true);
-    const content = useContentStore();
-    content.dramas[0]!.name = 'Changed';
     await auth.logout();
     expect(auth.authenticated).toBe(false);
-    expect(content.dramas[0]!.name).not.toBe('Changed');
+    expect(auth.user).toBeNull();
   });
 });

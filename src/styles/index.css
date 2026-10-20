@@ -1,6 +1,8 @@
 @import './base.css';
 @import './admin.css';
 @import './workspace.css';
+@import './shell.css';
+@import './components.css';
 
 .invitation {
   margin-bottom: 20px;

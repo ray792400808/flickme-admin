@@ -3,7 +3,6 @@ import { defineStore } from 'pinia';
 import { authApi } from '../api/auth';
 import { setAccessToken } from '../api/client';
 import type { AdminUser, LoginCredentials } from '../types/auth';
-import { useContentStore } from './content';
 
 const SESSION_KEY = 'flickme-admin-session';
 
@@ -15,9 +14,12 @@ interface StoredSession {
 function readSession(): StoredSession | null {
   if (typeof sessionStorage === 'undefined') return null;
   try {
-    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null') as StoredSession | null;
+    const session = JSON.parse(
+      sessionStorage.getItem(SESSION_KEY) || 'null',
+    ) as StoredSession | null;
     if (!session?.accessToken) return null;
-    const expiresAt = session.expiresAt < 1_000_000_000_000 ? session.expiresAt * 1000 : session.expiresAt;
+    const expiresAt =
+      session.expiresAt < 1_000_000_000_000 ? session.expiresAt * 1000 : session.expiresAt;
     if (expiresAt <= Date.now()) {
       sessionStorage.removeItem(SESSION_KEY);
       return null;
@@ -58,7 +60,6 @@ export const useAuthStore = defineStore('auth', () => {
     hasSession.value = false;
     setAccessToken(null);
     if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_KEY);
-    useContentStore().reset();
   }
   async function login(credentials: LoginCredentials) {
     clear();

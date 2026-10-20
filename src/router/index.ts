@@ -1,6 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { pinia } from '../stores';
+import { menuGroups, pathFor, permissionFor } from '../features/workspace/navigation';
+const workspace = () => import('../views/workspace/WorkspaceView.vue');
+const pendingModule = () => import('../views/system/ModulePendingView.vue');
 export const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
@@ -20,29 +23,57 @@ export const router = createRouter({
       component: () => import('../views/errors/ForbiddenView.vue'),
       meta: { requiresAuth: true, title: '无访问权限' },
     },
+    ...(import.meta.env.DEV
+      ? [
+          {
+            path: '/preview',
+            component: () => import('../layouts/AdminLayout.vue'),
+            props: { preview: true },
+            children: [
+              { path: '', redirect: '/preview/overview' },
+              {
+                path: ':page',
+                component: workspace,
+                beforeEnter: (to: import('vue-router').RouteLocationNormalized) =>
+                  menuGroups.some((group) => group.pages.some(([id]) => id === to.params.page)) ||
+                  '/preview/overview',
+              },
+            ],
+          },
+        ]
+      : []),
     {
       path: '/',
       component: () => import('../layouts/AdminLayout.vue'),
       meta: { requiresAuth: true },
       children: [
         { path: '', redirect: '/dashboard' },
+        { path: 'overview', redirect: '/dashboard' },
+        { path: 'logs', redirect: '/audit-logs' },
+        ...menuGroups
+          .flatMap((group) => group.pages)
+          .filter(([id]) => !['accounts', 'roles', 'logs', 'cands'].includes(id))
+          .map(([id, title]) => ({
+            path: pathFor(id).slice(1),
+            name: id === 'overview' ? 'dashboard' : id,
+            component:
+              id === 'dramas'
+                ? () => import('../views/dramas/DramaListView.vue')
+                : id === 'overview'
+                  ? () => import('../views/dashboard/OverviewView.vue')
+                  : pendingModule,
+            meta: {
+              title,
+              permission: permissionFor(id),
+              implementation:
+                id === 'dramas' ? 'awaiting-api' : id === 'overview' ? 'live' : 'planned',
+            },
+          })),
         {
-          path: 'dashboard',
-          name: 'dashboard',
-          component: () => import('../views/dashboard/OverviewView.vue'),
-          meta: { title: '数据概览', permission: 'overview' },
-        },
-        {
-          path: 'dramas',
-          name: 'dramas',
-          component: () => import('../views/dramas/DramaListView.vue'),
-          meta: { title: 'Short 剧库', permission: 'content' },
-        },
-        {
-          path: 'characters',
-          name: 'characters',
-          component: () => import('../views/characters/CharacterListView.vue'),
-          meta: { title: 'Stories 角色库', permission: 'content' },
+          path: 'cands',
+          name: 'cands',
+          component: () => import('../views/cands/CandidateListView.vue'),
+          meta: { title: 'AI 角色备选库', permission: 'content', implementation: 'skeleton' },
         },
         {
           path: 'accounts',

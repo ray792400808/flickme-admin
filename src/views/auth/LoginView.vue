@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { menuGroups, pathFor } from '../../features/workspace/navigation';
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -9,6 +10,7 @@ const email = ref('');
 const password = ref('');
 const error = ref('');
 const submitting = ref(false);
+const development = import.meta.env.DEV;
 async function login() {
   if (submitting.value) return;
   submitting.value = true;
@@ -18,9 +20,9 @@ async function login() {
     password.value = '';
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard';
     await router.replace(
-      ['/dashboard', '/dramas', '/characters', '/accounts', '/roles', '/audit-logs'].includes(
-        target.split('?')[0]!,
-      )
+      menuGroups
+        .flatMap((group) => group.pages.map(([id]) => pathFor(id)))
+        .includes(target.split('?')[0]!)
         ? target
         : '/dashboard',
     );
@@ -46,5 +48,8 @@ async function login() {
         </button>
       </form>
     </section>
+    <p v-if="development" style="margin-top: 16px">
+      <RouterLink to="/preview/cands">查看开发原型参考 →</RouterLink>
+    </p>
   </main>
 </template>

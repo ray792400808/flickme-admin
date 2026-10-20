@@ -6,6 +6,7 @@ const props = defineProps<{
   message?: string;
   requireReason?: boolean;
   confirmLabel?: string;
+  busy?: boolean;
 }>();
 const emit = defineEmits<{ confirm: [reason: string]; cancel: [] }>();
 const dialog = ref<HTMLDialogElement>();
@@ -26,14 +27,14 @@ watch(
     ><dialog
       ref="dialog"
       class="confirm-dialog"
-      @cancel.prevent="emit('cancel')"
+      @cancel.prevent="!busy && emit('cancel')"
       @click="
         (event) => {
-          if (event.target === dialog) emit('cancel');
+          if (event.target === dialog && !busy) emit('cancel');
         }
       "
     >
-      <form @submit.prevent="emit('confirm', reason.trim())">
+      <form @submit.prevent="!busy && emit('confirm', reason.trim())">
         <h2>{{ title }}</h2>
         <p>{{ message }}</p>
         <label v-if="requireReason"
@@ -46,9 +47,9 @@ watch(
           />
         </label>
         <footer>
-          <button type="button" @click="emit('cancel')">取消</button
-          ><button class="primary" :disabled="requireReason && !reason.trim()">
-            {{ confirmLabel || '确认' }}
+          <button type="button" :disabled="busy" @click="emit('cancel')">取消</button
+          ><button class="primary" :disabled="busy || (requireReason && !reason.trim())">
+            {{ busy ? '处理中…' : confirmLabel || '确认' }}
           </button>
         </footer>
       </form>
