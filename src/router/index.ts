@@ -71,7 +71,7 @@ export const router = createRouter({
 });
 router.beforeEach(async (to) => {
   const auth = useAuthStore(pinia);
-  if (to.meta.requiresAuth && !auth.authenticated)
+  if (to.meta.requiresAuth && !auth.authenticated && !(await auth.restore()))
     return { name: 'login', query: { redirect: to.fullPath } };
   if (to.name === 'login' && auth.authenticated) return { name: 'dashboard' };
   if (to.meta.requiresAuth && auth.authenticated) {

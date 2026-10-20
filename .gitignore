@@ -1,4 +1,7 @@
 node_modules/
 dist/
+.tools/
+.vite.*.log
+node-v*-win-*.zip
 .env.local
 .env.*.local
