@@ -1,87 +1,131 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { authApi } from '../api/auth';
+import { authApi, systemApi } from '../api/admin';
 import { setAccessToken } from '../api/client';
-import type { AdminUser, LoginCredentials } from '../types/auth';
+import type { AdminUser, Menu } from '../types/auth';
 
-const SESSION_KEY = 'flickme-admin-session';
-
-interface StoredSession {
-  accessToken: string;
-  expiresAt: number;
-}
-
-function readSession(): StoredSession | null {
-  if (typeof sessionStorage === 'undefined') return null;
-  try {
-    const session = JSON.parse(
-      sessionStorage.getItem(SESSION_KEY) || 'null',
-    ) as StoredSession | null;
-    if (!session?.accessToken) return null;
-    const expiresAt =
-      session.expiresAt < 1_000_000_000_000 ? session.expiresAt * 1000 : session.expiresAt;
-    if (expiresAt <= Date.now()) {
-      sessionStorage.removeItem(SESSION_KEY);
-      return null;
-    }
-    return session;
-  } catch {
-    sessionStorage.removeItem(SESSION_KEY);
-    return null;
-  }
-}
-
+// token 初始值由 client.ts 负责（从 sessionStorage 读）
 export const useAuthStore = defineStore('auth', () => {
-  const storedSession = readSession();
+  // ─── 状态 ───────────────────────────────────────────────
   const user = ref<AdminUser | null>(null);
-  const hasSession = ref(storedSession !== null);
-  setAccessToken(storedSession?.accessToken ?? null);
+  const token = ref<string | null>(null);
+  const permissions = ref<string[]>([]);
+  const menus = ref<Menu[]>([]);
+  const tokenExpiresAt = ref<number | null>(null);
+
+  // ─── 计算属性 ────────────────────────────────────────────
+  /** 登录状态由 user 对象决定，token 持久化由 client.ts 管理 */
   const authenticated = computed(() => user.value !== null);
-  function can(group: string, write = false) {
-    const value = user.value?.permissions?.[group];
-    return value === 'rw' || (!write && value === 'r');
+
+  const isSuperAdmin = computed(() => user.value?.is_super_admin === true);
+
+  /** 路由级权限检查：用户能否进入某个页面 */
+  const canView = (path: string): boolean => {
+    if (isSuperAdmin.value) return true;
+    const flat = flattenMenus(menus.value);
+    return flat.some((m) => m.path === path && !m.is_hidden);
+  };
+
+  /** 按钮级权限检查：v-perm="'user.create'" */
+  const can = (...codes: string[]): boolean => {
+    if (isSuperAdmin.value) return true;
+    return codes.some((code) => {
+      if (permissions.value.includes(code)) return true;
+      const [module] = code.split('.');
+      return permissions.value.includes(`${module}.*`);
+    });
+  };
+
+  /** v-perm 指令语法糖 */
+  const hasPerm = (code: string): boolean => can(code);
+
+  // ─── 动作 ───────────────────────────────────────────────
+  /** 登录：接受 (email, password) 或 ({email, password}) */
+  async function login(
+    emailOrCreds: string | { email: string; password: string },
+    passwordArg?: string,
+  ): Promise<void> {
+    const credentials =
+      typeof emailOrCreds === 'string'
+        ? { email: emailOrCreds, password: passwordArg ?? '' }
+        : emailOrCreds;
+
+    clear();
+    const result = await authApi.login(credentials);
+    token.value = result.token;
+    setAccessToken(result.token);
+    applyProfile(result.user);
   }
-  async function refresh() {
-    user.value = await authApi.me();
+
+  /** 从 /auth/me 或 /auth/refresh 同步状态 */
+  function applyProfile(u: AdminUser): void {
+    user.value = u;
+    permissions.value = u.permissions ?? [];
+    menus.value = u.menus ?? [];
   }
-  async function restore() {
-    if (authenticated.value) return true;
-    if (!hasSession.value) return false;
-    try {
-      await refresh();
-      return true;
-    } catch {
-      clear();
-      return false;
-    }
+
+  async function refresh(): Promise<void> {
+    const u = await authApi.me();
+    applyProfile(u);
   }
-  function clear() {
+
+  async function fetchSession(): Promise<void> {
+    const data = await systemApi.session();
+    tokenExpiresAt.value = Date.now() + data.token_expires_in * 1000;
+  }
+
+  function clear(): void {
     user.value = null;
-    hasSession.value = false;
+    token.value = null;
+    permissions.value = [];
+    menus.value = [];
+    tokenExpiresAt.value = null;
     setAccessToken(null);
-    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_KEY);
   }
-  async function login(credentials: LoginCredentials) {
-    clear();
+
+  async function logout(): Promise<void> {
     try {
-      const result = await authApi.login(credentials);
-      setAccessToken(result.accessToken);
-      hasSession.value = true;
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(
-          SESSION_KEY,
-          JSON.stringify({ accessToken: result.accessToken, expiresAt: result.expiresAt }),
-        );
-      }
-      user.value = await authApi.me();
-    } catch (error) {
+      await authApi.logout();
+    } catch { /* ignore */ } finally {
       clear();
-      throw error;
     }
   }
-  async function logout() {
-    await authApi.logout();
-    clear();
-  }
-  return { user, authenticated, login, logout, clear, can, refresh, restore };
+
+  return {
+    // 状态
+    user,
+    token,
+    permissions,
+    menus,
+    tokenExpiresAt,
+
+    // 计算
+    authenticated,
+    isSuperAdmin,
+    can,
+    canView,
+    hasPerm,
+
+    // 动作
+    login,
+    refresh,
+    fetchSession,
+    clear,
+    logout,
+    applyProfile,
+  };
 });
+
+// ─── 辅助函数 ──────────────────────────────────────────────
+export function flattenMenus(list: Menu[]): Menu[] {
+  const result: Menu[] = [];
+  const walk = (nodes: Menu[]) => {
+    for (const node of nodes) {
+      result.push(node);
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(list);
+
+  return result;
+}

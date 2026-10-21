@@ -1,0 +1,109 @@
+/* ───────────────────────────────────────────────
+ * Element Plus 主色覆盖：用 CSS 变量统一到 prototype 调色板
+ * ─────────────────────────────────────────────── */
+:root {
+  /* el-button primary / el-tag / 链接 / focus 等等 */
+  --el-color-primary: var(--accent);
+  --el-color-primary-light-3: #db3e54;
+  --el-color-primary-light-5: #e66778;
+  --el-color-primary-light-7: #f1afb7;
+  --el-color-primary-light-8: #f7d4da;
+  --el-color-primary-light-9: var(--accent-soft);
+  --el-color-primary-dark-2: var(--accent-hover);
+
+  /* 表单 */
+  --el-color-success: var(--good);
+  --el-color-warning: var(--warn);
+  --el-color-danger: var(--bad);
+  --el-color-error: var(--bad);
+  --el-color-info: var(--muted);
+
+  --el-text-color-regular: var(--fg);
+  --el-text-color-secondary: var(--muted);
+  --el-text-color-placeholder: var(--muted2);
+  --el-border-color: var(--line);
+  --el-border-color-light: var(--line);
+  --el-border-color-lighter: var(--line);
+  --el-fill-color-light: var(--surface2);
+  --el-fill-color-blank: var(--surface);
+
+  --el-font-family: var(--sans);
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+}
+
+/* 暗色 mode 由 --bg 系列和 prefers-color-scheme 自动接管，Element Plus var(--el-color-primary) 已绑死 hardcoded 蓝，
+   因此手动覆盖几处关键样式 */
+.el-button {
+  font-family: var(--sans);
+}
+.el-button--primary {
+  --el-button-bg-color: var(--accent);
+  --el-button-border-color: var(--accent);
+  --el-button-hover-bg-color: var(--accent-hover);
+  --el-button-hover-border-color: var(--accent-hover);
+  --el-button-active-bg-color: var(--accent-hover);
+  --el-button-active-border-color: var(--accent-hover);
+}
+.el-button--primary.is-disabled,
+.el-button--primary.is-disabled:hover {
+  opacity: 0.45;
+}
+
+.el-tag--primary {
+  --el-tag-bg-color: var(--accent-soft);
+  --el-tag-border-color: transparent;
+  --el-tag-text-color: var(--accent);
+}
+
+.el-menu {
+  border-right: none !important;
+}
+
+.el-card {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+/* 让 dialog 也跟随主题 */
+.el-dialog {
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--line);
+}
+.el-dialog__title {
+  font-weight: 600;
+}
+
+/* ───────────────────────────────────────────────
+ * Drawer：对齐 prototype 的右侧抽屉
+ * header = 标题 + 副标题 + 关闭按钮；body 独立滚动；footer 常驻底部
+ * ─────────────────────────────────────────────── */
+.el-drawer {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.el-drawer__header {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg);
+  font-weight: 400;
+}
+.el-drawer__body {
+  padding: 18px 20px;
+}
+.el-drawer__footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+/* 原型里 .db 用 16px 间距纵向排列表单字段 */
+.admin-drawer .el-drawer__body .el-form-item {
+  margin-bottom: 18px;
+}
+.admin-drawer .el-drawer__body .el-form-item:last-child {
+  margin-bottom: 0;
+}

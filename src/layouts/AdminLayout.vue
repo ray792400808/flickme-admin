@@ -1,252 +1,578 @@
+<template>
+  <div class="shell" :class="{ navopen: mobileNavOpen }">
+    <!-- 遮罩（窄屏） -->
+    <div v-if="mobileNavOpen" class="nav-scrim" @click="mobileNavOpen = false" />
+
+    <!-- 侧栏 -->
+    <aside class="side" :class="{ open: mobileNavOpen }">
+      <div class="brand">
+        <i><span class="brand-mark">F</span></i>
+        <span class="brand-text">
+          Flickme
+          <small>运营控制台</small>
+        </span>
+      </div>
+      <nav class="nav" aria-label="主导航">
+        <SidebarItem v-for="node in menuTree" :key="node.id" :item="node" />
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="top">
+        <button class="ic burger" aria-label="菜单" @click="mobileNavOpen = !mobileNavOpen">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+
+        <div class="crumb">
+          <template v-for="(c, i) in crumbs" :key="i">
+            <span v-if="i">{{ c }}</span>
+            <b v-else>{{ c }}</b>
+          </template>
+        </div>
+
+        <div class="gs">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+          <input
+            v-model="searchTerm"
+            placeholder="搜索功能，如：用户、角色、权限"
+            autocomplete="off"
+          />
+          <div v-if="searchResults.length" class="res">
+            <button
+              v-for="r in searchResults"
+              :key="r.path"
+              class="search-result"
+              @click="goto(r)"
+            >
+              <el-icon><component :is="resolveLayoutIcon(r.icon)" /></el-icon>
+              <span>{{ r.title }}</span>
+              <span class="path mono">{{ r.path }}</span>
+            </button>
+          </div>
+        </div>
+
+        <span class="spacer" />
+
+        <span class="api-tag" :class="{ ok: apiOnline, bad: !apiOnline }">
+          <i />
+          {{ apiOnline ? 'API 在线' : 'API 离线' }}
+        </span>
+
+        <el-dropdown trigger="click" @command="onCommand">
+          <button class="user-trigger" aria-label="账号菜单">
+            <span class="av">{{ (auth.user?.name ?? 'A').charAt(0) }}</span>
+            <span class="uname">{{ auth.user?.name ?? '未登录' }}</span>
+            <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled>
+                <div class="profile-card">
+                  <b>{{ auth.user?.name }}</b>
+                  <small>{{ auth.user?.email }}</small>
+                  <small>{{ roleNames || '未分配角色' }}</small>
+                </div>
+              </el-dropdown-item>
+              <el-dropdown-item command="password" divided>
+                <el-icon><Lock /></el-icon> 修改密码
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <el-icon><SwitchButton /></el-icon> 退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </header>
+
+      <main id="view" class="page">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </main>
+    </div>
+
+    <!-- 修改密码 -->
+    <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
+      <el-form ref="pwdRef" :model="pwdForm" :rules="pwdRules" label-width="84px">
+        <el-form-item label="原密码" prop="old_password">
+          <el-input v-model="pwdForm.old_password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" prop="password">
+          <el-input v-model="pwdForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="password_confirmation">
+          <el-input v-model="pwdForm.password_confirmation" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pwdSaving" @click="submitPassword">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
 <script setup lang="ts">
-import { computed, onMounted, provide, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { Lock, SwitchButton } from '@element-plus/icons-vue';
+import * as ElementPlusIconsVue from '@element-plus/icons-vue';
+import SidebarItem from '../components/layout/SidebarItem.vue';
 import { useAuthStore } from '../stores/auth';
-import { getHealth } from '../api/system';
-import { operationsEnabled } from '../api/operations';
-import { usersEnabled, coinsEnabled } from '../api/users';
-import {
-  icons,
-  menuGroups,
-  pageForPath,
-  pathFor,
-  permissionFor,
-} from '../features/workspace/navigation';
-const props = withDefaults(defineProps<{ preview?: boolean }>(), { preview: false });
+import { authApi } from '../api/admin';
+import { buildRoutesFromMenus } from '../router';
+
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const mobileOpen = ref(false);
-const openGroups = ref<Record<string, boolean>>({ content: true });
-const query = ref('');
-const searchFocused = ref(false);
-const error = ref('');
-const loggingOut = ref(false);
-const health = ref('检查 API');
-const checking = ref(false);
-const theme = ref(
-  localStorage.getItem('flickme-theme') ||
-    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-);
-provide(
-  'workspacePreview',
-  computed(() => props.preview),
-);
-provide('workspaceTheme', theme);
-watch(
-  theme,
-  (value) => {
-    document.documentElement.dataset.theme = value;
-    localStorage.setItem('flickme-theme', value);
-  },
-  { immediate: true },
-);
-const current = computed(() =>
-  props.preview ? String(route.params.page || 'overview') : pageForPath(route.path),
-);
-const groups = computed(() =>
-  menuGroups
-    .map((group) => ({
-      ...group,
-      pages: group.pages.filter(([id]) => props.preview || auth.can(permissionFor(id) || group.id)),
-    }))
-    .filter((group) => group.pages.length),
-);
-const activeGroup = computed(() =>
-  menuGroups.find((group) => group.pages.some(([id]) => id === current.value)),
-);
-const title = computed(
-  () => activeGroup.value?.pages.find(([id]) => id === current.value)?.[1] || route.meta.title,
-);
-const results = computed(() =>
-  query.value.trim()
-    ? groups.value
-        .flatMap((group) => group.pages.map(([id, label]) => ({ id, label, group: group.title })))
-        .filter((item) =>
-          (item.label + item.group).toLowerCase().includes(query.value.trim().toLowerCase()),
-        )
-        .slice(0, 8)
-    : [],
-);
-const isLive = computed(
-  () => !props.preview && ['overview', 'accounts', 'roles', 'logs'].includes(current.value),
-);
-const notice = computed(() =>
-  props.preview
-    ? '开发原型参考：使用独立示例数据，所有业务操作均为本地模拟。'
-    : isLive.value
-      ? '正式工作区：数据以服务端实际返回为准。'
-      : (['chips', 'hot', 'launch', 'words', 'filters', 'recs'].includes(current.value) &&
-            operationsEnabled) ||
-          (current.value === 'userlist' && usersEnabled) ||
-          (current.value === 'coinadj' && coinsEnabled)
-        ? '业务接口已启用，数据及操作结果以服务端返回为准。'
-        : '开发中：此模块尚未接入业务接口，写操作暂不可用。',
-);
-function link(id: string) {
-  return props.preview ? '/preview/' + id : pathFor(id);
+
+const mobileNavOpen = ref(false);
+const apiOnline = ref(false);
+
+// icon 名字 → Element Plus 图标组件
+const iconCache: Record<string, unknown> = {};
+function resolveLayoutIcon(name: string | null | undefined) {
+  if (!name) return undefined;
+  if (!iconCache[name]) iconCache[name] = ElementPlusIconsVue[name as keyof typeof ElementPlusIconsVue];
+  return iconCache[name];
 }
-function expanded(id: string) {
-  return openGroups.value[id] ?? activeGroup.value?.id === id;
+
+// 顶部面包屑：路径切成层级
+const crumbs = computed(() => {
+  const parts = (route.meta.title as string) ?? route.path.replace(/^\//, '').split('/');
+  return (Array.isArray(parts) ? parts : [parts]) as string[];
+});
+
+const menuTree = computed(() => auth.menus);
+
+const roleNames = computed(() => auth.user?.roles.map((r) => r.name).join('、'));
+
+// ────── 搜索 ──────
+const searchTerm = ref('');
+interface SearchHit {
+  path: string;
+  title: string;
+  icon?: string | null;
 }
-watch(
-  () => route.fullPath,
-  () => {
-    mobileOpen.value = false;
-    query.value = '';
-    searchFocused.value = false;
-  },
-);
+
+const flatMenus = computed<SearchHit[]>(() => {
+  const walk = (list: typeof auth.menus, out: SearchHit[] = []) => {
+    for (const m of list) {
+      if (!m.meta.isHidden) out.push({ path: m.path, title: m.meta.title, icon: m.icon });
+      if (m.children?.length) walk(m.children, out);
+    }
+    return out;
+  };
+  return walk(auth.menus);
+});
+
+const searchResults = computed<SearchHit[]>(() => {
+  const kw = searchTerm.value.trim().toLowerCase();
+  if (!kw) return [];
+  return flatMenus.value
+    .filter((m) => m.title.toLowerCase().includes(kw) || m.path.toLowerCase().includes(kw))
+    .slice(0, 8);
+});
+
+function goto(item: SearchHit) {
+  searchTerm.value = '';
+  router.push(item.path);
+  mobileNavOpen.value = false;
+}
+
+// ────── API 健康检查 ──────
 async function checkHealth() {
-  if (checking.value) return;
-  checking.value = true;
   try {
-    health.value = (await getHealth()).status === 'ok' ? 'API 已连接' : 'API 状态异常';
+    const res = await fetch('/admin/health');
+    apiOnline.value = (await res.json()).data.status === 'ok';
   } catch {
-    health.value = 'API 未连接';
-  } finally {
-    checking.value = false;
+    apiOnline.value = false;
   }
 }
-async function logout() {
-  loggingOut.value = true;
-  error.value = '';
+
+// ────── 修改密码 ──────
+const pwdVisible = ref(false);
+const pwdSaving = ref(false);
+const pwdRef = ref<FormInstance>();
+
+const pwdForm = reactive({
+  old_password: '',
+  password: '',
+  password_confirmation: '',
+});
+
+const pwdRules: FormRules = {
+  old_password: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 8, max: 64, message: '密码 8-64 位', trigger: 'blur' },
+  ],
+  password_confirmation: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (_r, v: string, cb) =>
+        v === pwdForm.password ? cb() : cb(new Error('两次输入的密码不一致')),
+      trigger: 'blur',
+    },
+  ],
+};
+
+async function submitPassword() {
+  if (!pwdRef.value) return;
+  await pwdRef.value.validate();
+
+  pwdSaving.value = true;
   try {
+    await authApi.changePassword(pwdForm);
+    ElMessage.success('密码已修改，请重新登录');
+    pwdVisible.value = false;
     await auth.logout();
     await router.replace('/login');
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '退出失败';
+  } catch (error) {
+    ElMessage.error((error as Error).message ?? '修改失败');
   } finally {
-    loggingOut.value = false;
+    pwdSaving.value = false;
   }
 }
+
+// ────── 下拉菜单 ──────
+async function onCommand(cmd: string) {
+  if (cmd === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定要退出登录吗？', '退出', { type: 'warning' });
+    } catch {
+      return;
+    }
+    await auth.logout();
+    await router.replace('/login');
+  } else if (cmd === 'password') {
+    pwdForm.old_password = '';
+    pwdForm.password = '';
+    pwdForm.password_confirmation = '';
+    pwdVisible.value = true;
+  }
+}
+
 onMounted(() => {
-  if (!props.preview) void checkHealth();
+  checkHealth();
+  // 菜单已在 login/refresh 时灌入 auth.menus，此时构建路由最安全
+  buildRoutesFromMenus();
 });
 </script>
 
-<template>
-  <div
-    class="admin-shell"
-    @keydown.esc="
-      mobileOpen = false;
-      searchFocused = false;
-    "
-  >
-    <button
-      v-if="mobileOpen"
-      class="nav-backdrop"
-      aria-label="关闭菜单"
-      @click="mobileOpen = false"
-    />
-    <aside class="admin-side" :class="{ 'is-open': mobileOpen }" aria-label="侧边导航">
-      <RouterLink :to="link('overview')" class="admin-brand"
-        ><i
-          ><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" /></svg
-        ></i>
-        <div>Flickme<small>运营后台</small></div></RouterLink
-      >
-      <nav class="admin-nav" aria-label="主导航">
-        <div v-for="group in groups" :key="group.id" class="nav-group">
-          <RouterLink
-            v-if="group.id === 'overview'"
-            :to="link('overview')"
-            class="group-button"
-            :class="{ current: current === 'overview' }"
-            ><svg viewBox="0 0 24 24"><path :d="icons[group.icon]" /></svg
-            >{{ group.title }}</RouterLink
-          >
-          <template v-else>
-            <button
-              class="group-button"
-              :class="{ current: activeGroup?.id === group.id }"
-              :aria-expanded="expanded(group.id)"
-              @click="openGroups[group.id] = !expanded(group.id)"
-            >
-              <svg viewBox="0 0 24 24"><path :d="icons[group.icon]" /></svg>{{ group.title
-              }}<svg class="chevron" :class="{ expanded: expanded(group.id) }" viewBox="0 0 24 24">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </button>
-            <div v-show="expanded(group.id)" class="sub-menu">
-              <RouterLink
-                v-for="[id, label] in group.pages"
-                :key="id"
-                :to="link(id)"
-                :class="{ selected: current === id }"
-                >{{ label }}</RouterLink
-              >
-            </div>
-          </template>
-        </div>
-      </nav>
-      <div class="admin-session">
-        <small
-          >{{ preview ? '界面预览 · 本地示例数据' : auth.user?.name || auth.user?.email }}<br />{{
-            preview ? '无需登录，可体验所有页面' : auth.user?.roleName
-          }}</small
-        ><RouterLink v-if="preview" to="/login">前往登录 →</RouterLink
-        ><button v-else :disabled="loggingOut" @click="logout">
-          {{ loggingOut ? '退出中…' : '退出登录' }}
-        </button>
-      </div>
-    </aside>
-    <div class="admin-main">
-      <header class="admin-top">
-        <button class="icon-button mobile-menu" aria-label="打开菜单" @click="mobileOpen = true">
-          ☰
-        </button>
-        <div class="admin-crumb">
-          {{ activeGroup?.title }} <span>›</span> <b>{{ title }}</b>
-        </div>
-        <div class="feature-search" @focusout="searchFocused = false">
-          <svg viewBox="0 0 24 24">
-            <circle cx="10" cy="10" r="6" />
-            <path d="m15 15 5 5" /></svg
-          ><input
-            v-model="query"
-            aria-label="搜索功能"
-            placeholder="搜索功能，如 优惠券、Chips"
-            @focus="searchFocused = true"
-            @keydown.enter="results[0] && router.push(link(results[0].id))"
-          />
-          <div v-if="query && searchFocused" class="feature-results">
-            <RouterLink
-              v-for="item in results"
-              :key="item.id"
-              :to="link(item.id)"
-              @mousedown.prevent
-              >{{ item.label }}<small>{{ item.group }}</small></RouterLink
-            >
-            <div v-if="!results.length">没有匹配的功能</div>
-          </div>
-        </div>
-        <span class="environment-label">{{
-          preview ? '本地预览' : auth.user?.roleName || '管理后台'
-        }}</span>
-        <button
-          class="icon-button"
-          :aria-label="theme === 'dark' ? '切换浅色主题' : '切换深色主题'"
-          @click="theme = theme === 'dark' ? 'light' : 'dark'"
-        >
-          <svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" /></svg>
-        </button>
-        <span class="admin-avatar" :title="auth.user?.email">{{
-          preview ? '预' : (auth.user?.name || auth.user?.email || '管').slice(0, 1)
-        }}</span>
-      </header>
-      <main class="admin-content">
-        <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-        <div class="workspace-notice" :class="{ live: isLive }">
-          <span>{{ notice }}</span
-          ><button v-if="!preview" :disabled="checking" @click="checkHealth">
-            {{ checking ? '检查中…' : health }}
-          </button>
-        </div>
-        <RouterView v-slot="{ Component }">
-          <component :is="Component" :key="preview ? 'preview' : 'live'" />
-        </RouterView>
-      </main>
-    </div>
-  </div>
-</template>
+<style scoped>
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── 侧栏 ─── */
+.side {
+  width: 232px;
+  flex: none;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  position: fixed;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+  overflow-y: auto;
+  transition: transform 0.2s;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  color: var(--fg);
+}
+.brand i {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  font-style: normal;
+}
+.brand-mark {
+  color: var(--accent-fg);
+  font-weight: 700;
+  font-size: 14px;
+}
+.brand-text small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+.nav {
+  padding: 4px 10px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ─── 主区 ─── */
+.main {
+  margin-left: 232px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── 顶栏 ─── */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+}
+.crumb {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.crumb b {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.gs {
+  position: relative;
+  width: 260px;
+  max-width: 30vw;
+}
+.gs input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface2);
+  padding: 0 10px 0 32px;
+  outline: none;
+}
+.gs input:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.gs > svg {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  width: 16px;
+  height: 16px;
+  stroke: var(--muted);
+  fill: none;
+  stroke-width: 1.8;
+}
+.gs .res {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  z-index: 80;
+}
+.gs .res .search-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+}
+.gs .res .search-result:hover {
+  background: var(--surface2);
+}
+.gs .res .search-result .path {
+  margin-left: auto;
+}
+
+.spacer {
+  margin-left: auto;
+  flex: 0 0 0;
+}
+
+.ic {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.ic svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--fg);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.burger {
+  display: none;
+}
+
+.api-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: default;
+}
+.api-tag i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.api-tag.ok {
+  color: var(--good);
+  border-color: transparent;
+  background: var(--good-soft);
+}
+.api-tag.ok i {
+  background: var(--good);
+}
+.api-tag.bad {
+  color: var(--bad);
+  border-color: transparent;
+  background: var(--bad-soft);
+}
+.api-tag.bad i {
+  background: var(--bad);
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  padding: 0;
+  outline: none;
+}
+.av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+.uname {
+  font-size: 13.5px;
+}
+.chev {
+  width: 14px;
+  height: 14px;
+  stroke: var(--muted);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.profile-card b {
+  font-size: 13px;
+}
+.profile-card small {
+  color: var(--muted);
+}
+
+/* ─── 路由切换 ─── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ─── 窄屏 ─── */
+.nav-scrim {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .side {
+    transform: translateX(-102%);
+    box-shadow: var(--shadow);
+  }
+  .side.open {
+    transform: none;
+  }
+  .navopen .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 6, 6, 0.4);
+    z-index: 25;
+  }
+  .main {
+    margin-left: 0;
+  }
+  .top {
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .gs,
+  .crumb {
+    display: none;
+  }
+  .uname {
+    display: none;
+  }
+  .burger {
+    display: grid;
+  }
+}
+</style>

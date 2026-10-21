@@ -1,0 +1,70 @@
+/**
+ * 设计令牌：与原型图 1:1 对应。
+ *  - 暖灰底 + 白卡片 + 红强调
+ *  - 单层阴影、8/12px 圆角
+ */
+:root {
+  --bg: #f5f4f3;
+  --surface: #ffffff;
+  --surface2: #faf9f8;
+  --surface3: #f1eeec;
+  --line: #e7e4e2;
+  --line2: #d9d5d2;
+
+  --fg: #1e1b1a;
+  --muted: #6d6663;
+  --muted2: #98928f;
+
+  --accent: #d01530;
+  --accent-fg: #ffffff;
+  --accent-hover: #b81128;
+  --accent-soft: #fcebee;
+
+  --good: #1b7f48;
+  --good-soft: #e5f4ea;
+  --warn: #9a6208;
+  --warn-soft: #fcf1dc;
+  --bad: #c0262d;
+  --bad-soft: #fbe8e8;
+  --info: #255f9e;
+  --info-soft: #e7f0fa;
+
+  --shadow: 0 12px 40px rgba(30, 20, 20, 0.16);
+  --shadow-sm: 0 2px 8px rgba(30, 20, 20, 0.06);
+
+  --radius: 10px;
+  --radius-lg: 12px;
+  --radius-sm: 6px;
+
+  --sans: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
+    system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #110f10;
+    --surface: #1a1718;
+    --surface2: #211d1e;
+    --surface3: #2a2425;
+    --line: #2d2829;
+    --line2: #3b3536;
+    --fg: #f2eeed;
+    --muted: #a09896;
+    --muted2: #6f6967;
+    --accent: #ff4d63;
+    --accent-fg: #1a0509;
+    --accent-hover: #ff7388;
+    --accent-soft: #3a1019;
+    --good: #52c283;
+    --good-soft: #14281c;
+    --warn: #e5b04f;
+    --warn-soft: #2d2210;
+    --bad: #ff7a80;
+    --bad-soft: #321416;
+    --info: #7db4ee;
+    --info-soft: #152434;
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
