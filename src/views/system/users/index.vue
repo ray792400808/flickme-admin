@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <div>
     <div class="ph">
       <div>
-        <h1>用户管理</h1>
+        <h1>账户管理</h1>
         <p>后台账号、角色分配与登录状态。删除账号前请确认其名下无待办审批。</p>
       </div>
       <div class="act">
         <span v-if="readOnly" class="readonly-pill">当前角色只读</span>
         <button v-if="auth.can('user.create')" class="btn pri" :disabled="readOnly" @click="handleAdd">
-          新增用户
+          新增账户
         </button>
       </div>
     </div>
@@ -30,7 +30,7 @@
         <select v-model="queryForm.status" class="filter-select" aria-label="状态" @change="handleSearch">
           <option :value="undefined">状态：全部</option>
           <option :value="true">启用</option>
-          <option :value="false">禁用</option>
+          <option :value="false">停用</option>
         </select>
         <button class="btn sm" @click="handleReset">重置</button>
         <span class="count">共 {{ total }} 条</span>
@@ -42,13 +42,13 @@
         <table>
           <thead>
             <tr>
-              <th>用户</th>
+              <th>账户</th>
               <th>角色</th>
               <th style="width: 90px">状态</th>
               <th style="width: 160px">最后登录</th>
               <th style="width: 130px">登录 IP</th>
               <th style="width: 160px">创建时间</th>
-              <th style="width: 200px">操作</th>
+              <th style="width: 260px">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -69,17 +69,36 @@
                 <span v-else class="text-muted">—</span>
               </td>
               <td>
+                <!-- 状态只做展示，启停走操作栏 -->
                 <span class="pill" :class="row.status ? 'good' : 'bad'">
-                  {{ row.status ? '启用' : '禁用' }}
+                  {{ row.status ? '启用' : '停用' }}
                 </span>
               </td>
-              <td class="mono">{{ row.login_at ? formatDate(row.login_at) : '从未登录' }}</td>
+              <td class="mono">{{ row.login_at ? formatUnix(row.login_at) : '从未登录' }}</td>
               <td class="mono">{{ row.login_ip || '—' }}</td>
-              <td class="mono">{{ formatDate(row.created_at) }}</td>
+              <td class="mono">{{ formatUnix(row.created_at) }}</td>
               <td>
                 <span class="row-actions">
                   <button class="btn sm" :disabled="!auth.can('user.edit')" @click="handleEdit(row)">
                     编辑
+                  </button>
+                  <button
+                    v-if="row.status"
+                    class="btn sm"
+                    :disabled="!auth.can('user.edit') || row.id === currentUserId"
+                    :title="row.id === currentUserId ? '不能停用当前登录的账户' : '停用后该账户无法登录'"
+                    @click="handleToggleStatus(row)"
+                  >
+                    停用
+                  </button>
+                  <button
+                    v-else
+                    class="btn sm"
+                    :disabled="!auth.can('user.edit')"
+                    title="启用后该账户可以登录后台"
+                    @click="handleToggleStatus(row)"
+                  >
+                    启用
                   </button>
                   <button class="btn sm" :disabled="!auth.can('user.edit')" @click="handleResetPwd(row)">
                     重置密码
@@ -131,6 +150,7 @@ import { useAuthStore } from '../../../stores/auth';
 import TablePager from '../../../components/common/TablePager.vue';
 import UserEditDialog from './components/UserEditDialog.vue';
 import ResetPwdDialog from './components/ResetPwdDialog.vue';
+import { formatUnix } from '../../../utils/datetime';
 
 const auth = useAuthStore();
 const currentUserId = computed(() => auth.user?.id);
@@ -152,11 +172,6 @@ const queryForm = reactive({
 const editDialogVisible = ref(false);
 const resetPwdDialogVisible = ref(false);
 const currentUser = ref<AdminUser | null>(null);
-
-function formatDate(iso: string): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString('zh-CN', { hour12: false });
-}
 
 async function loadData() {
   loading.value = true;
@@ -205,6 +220,32 @@ function handleEdit(user: AdminUser) {
 function handleResetPwd(user: AdminUser) {
   currentUser.value = user;
   resetPwdDialogVisible.value = true;
+}
+
+// 启停：走操作栏按钮。停用需二次确认，启用直接执行（对齐原型 accounts.actions）
+async function handleToggleStatus(user: AdminUser) {
+  const next = !user.status;
+
+  // 停用属于破坏性操作，先确认；启用是恢复操作，直接执行
+  if (!next) {
+    try {
+      await ElMessageBox.confirm(
+        `确定停用账户「${user.name}」？停用后该账户无法登录，已登录的会话将立即失效。`,
+        '停用确认',
+        { confirmButtonText: '停用', cancelButtonText: '取消', type: 'warning' },
+      );
+    } catch {
+      return;
+    }
+  }
+
+  try {
+    await userApi.update(user.id, { status: next });
+    user.status = next;
+    ElMessage.success(next ? '账户已启用' : '账户已停用');
+  } catch (error) {
+    ElMessage.error((error as Error).message || (next ? '启用失败' : '停用失败'));
+  }
 }
 
 async function handleDelete(user: AdminUser) {

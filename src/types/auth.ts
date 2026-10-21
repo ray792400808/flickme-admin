@@ -56,9 +56,9 @@ export interface AdminUser {
   roles: Role[];
   permissions: string[];
   menus: Menu[];
-  login_at: string | null;
+  login_at: number | string | null;
   login_ip: string | null;
-  created_at: string;
+  created_at: number | string;
 }
 
 export interface LoginCredentials {
@@ -81,6 +81,6 @@ export interface OperationLog {
   ip: string | null;
   input: Record<string, unknown> | null;
   description: string | null;
-  created_at: string;
+  created_at: number | string;
   user?: Pick<AdminUser, 'id' | 'name' | 'email'> | null;
 }

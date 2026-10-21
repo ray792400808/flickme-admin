@@ -5,6 +5,8 @@
     :size="520"
     direction="rtl"
     class="admin-drawer"
+    :show-close="false"
+    :close-on-click-modal="false"
     @close="handleClose"
   >
     <template #header="{ close }">
@@ -207,41 +209,6 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.drawer-head {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  width: 100%;
-}
-.drawer-head h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-.drawer-head p {
-  color: var(--muted);
-  font-size: 12.5px;
-  margin: 2px 0 0;
-}
-.drawer-close {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 6px;
-}
-.drawer-close:hover {
-  background: var(--surface2);
-  color: var(--fg);
-}
-.drawer-form :deep(.el-form-item) {
-  margin-bottom: 18px;
-}
 .row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

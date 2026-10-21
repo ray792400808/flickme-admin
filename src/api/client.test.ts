@@ -127,4 +127,56 @@ describe('API client', () => {
       message: '网络连接失败，请检查服务是否可用',
     });
   });
+
+  // ─── 统一响应体 { code, message, data, trace_id } ────────────
+
+  it('unwraps the unified success envelope', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({ code: 200, message: 'ok', data: { id: 7 }, trace_id: 'abc' }),
+      ),
+    );
+    expect(await requestApi<{ id: number }>('/users/7')).toEqual({ id: 7 });
+  });
+
+  it('exposes business code, trace id and nested validation errors on failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            code: 422,
+            message: '请求参数校验失败',
+            data: { errors: { email: ['邮箱格式不正确'] } },
+            trace_id: 'trace-xyz',
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(requestApi('/users', 'POST', {})).rejects.toMatchObject({
+      status: 422,
+      code: 422,
+      message: '请求参数校验失败',
+      traceId: 'trace-xyz',
+      errors: { email: ['邮箱格式不正确'] },
+    });
+  });
+
+  it('treats a 2xx response carrying a non-200 code as a failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(Response.json({ code: 4001, message: '不能删除自己', data: null })),
+    );
+    await expect(requestApi('/users/1', 'DELETE')).rejects.toMatchObject({
+      code: 4001,
+      message: '不能删除自己',
+    });
+  });
+
+  it('accepts a 2xx response without a code field (legacy / probes)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: { status: 'ok' } })));
+    expect(await requestApi('/health')).toEqual({ status: 'ok' });
+  });
 });

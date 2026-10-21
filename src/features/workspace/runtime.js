@@ -105,7 +105,7 @@ export function mountWorkspace(root, options) {
     },
     {
       id: 'users',
-      t: '用户管理',
+      t: '账户管理',
       ic: 'user',
       p: [
         ['userlist', '用户列表'],

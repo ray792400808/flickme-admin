@@ -76,7 +76,7 @@
               <td><span class="code">{{ row.path }}</span></td>
               <td class="text-muted ellipsis">{{ row.description || '—' }}</td>
               <td class="mono">{{ row.ip || '—' }}</td>
-              <td class="mono">{{ formatDate(row.created_at) }}</td>
+              <td class="mono">{{ formatUnix(row.created_at) }}</td>
               <td>
                 <button class="btn sm" @click="openDetail(row)">详情</button>
               </td>
@@ -131,7 +131,7 @@
           <dd>{{ current.description || '—' }}</dd>
 
           <dt>操作时间</dt>
-          <dd class="mono">{{ formatDate(current.created_at) }}</dd>
+          <dd class="mono">{{ formatUnix(current.created_at) }}</dd>
         </dl>
 
         <div class="fld">
@@ -153,6 +153,7 @@ import { ElMessage } from 'element-plus';
 import { logApi } from '../../../api/admin';
 import type { OperationLog } from '../../../types/auth';
 import TablePager from '../../../components/common/TablePager.vue';
+import { formatUnix } from '../../../utils/datetime';
 
 const loading = ref(false);
 const tableData = ref<OperationLog[]>([]);
@@ -182,11 +183,6 @@ function methodClass(method: string): string {
     default:
       return '';
   }
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString('zh-CN', { hour12: false });
 }
 
 function formatInput(input: unknown): string {

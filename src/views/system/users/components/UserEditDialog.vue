@@ -1,17 +1,19 @@
 <template>
   <el-drawer
     v-model="dialogVisible"
-    :title="isEdit ? '编辑账号' : '新增账号'"
+    :title="isEdit ? '编辑账户' : '新增账户'"
     :size="480"
     direction="rtl"
     class="admin-drawer"
+    :show-close="false"
+    :close-on-click-modal="false"
     @close="handleClose"
   >
     <template #header="{ close }">
       <div class="drawer-head">
         <div>
-          <h2>{{ isEdit ? '编辑账号' : '新增账号' }}</h2>
-          <p>{{ isEdit ? `ID ${user?.id}` : '后台账号与角色分配' }}</p>
+          <h2>{{ isEdit ? '编辑账户' : '新增账户' }}</h2>
+          <p>{{ isEdit ? `ID ${user?.id}` : '后台账户与角色分配' }}</p>
         </div>
         <button class="drawer-close" type="button" aria-label="关闭" @click="close">×</button>
       </div>
@@ -154,7 +156,7 @@ async function handleSubmit() {
       // 密码留空表示不修改
       if (formData.value.password) updateData.password = formData.value.password;
       await userApi.update(props.user.id, updateData);
-      ElMessage.success('账号已更新');
+      ElMessage.success('账户已更新');
     } else {
       await userApi.create({
         name: formData.value.name,
@@ -163,7 +165,7 @@ async function handleSubmit() {
         role_ids: formData.value.role_ids,
         status: formData.value.status,
       });
-      ElMessage.success('账号已创建');
+      ElMessage.success('账户已创建');
     }
     emit('success');
     handleClose();
@@ -176,41 +178,6 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.drawer-head {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  width: 100%;
-}
-.drawer-head h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-.drawer-head p {
-  color: var(--muted);
-  font-size: 12.5px;
-  margin: 2px 0 0;
-}
-.drawer-close {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 6px;
-}
-.drawer-close:hover {
-  background: var(--surface2);
-  color: var(--fg);
-}
-.drawer-form :deep(.el-form-item) {
-  margin-bottom: 18px;
-}
 .hint {
   font-size: 12px;
   color: var(--muted);

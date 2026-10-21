@@ -76,6 +76,10 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly errors?: Record<string, string[]>,
+    /** 后端业务码（App\Common\ResponseDef），失败时必带；成功恒为 200 */
+    public readonly code?: number,
+    /** 后端返回的 trace_id，排查问题时附在工单里 */
+    public readonly traceId?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -118,13 +122,25 @@ export async function requestApi<T>(path: string, method = 'GET', body?: unknown
   }
 
   const payload = await response.json().catch(() => null);
-  if (!response.ok)
+
+  // 统一响应体：{ code, message, data, trace_id? }
+  // 失败时 HTTP 状态码与业务 code 通常一致，但以 code 为准做业务分支。
+  if (!response.ok) {
     throw new ApiError(
       payload?.message || `请求失败 (${response.status})`,
       response.status,
-      payload?.errors,
+      // 校验失败时后端把 errors 放在 data 里
+      payload?.data?.errors ?? payload?.errors,
+      payload?.code,
+      payload?.trace_id ?? traceId,
     );
+  }
 
   if (!payload || !('data' in payload)) throw new ApiError('接口返回格式异常', response.status);
+  // 后端保证失败时不会用 2xx；但如果将来某个接口返回 code !== 200，这里兜住。
+  // code 缺省（老接口 / 探针）时按成功处理。
+  if (typeof payload.code === 'number' && payload.code !== 200) {
+    throw new ApiError(payload.message || '请求失败', response.status, payload.data?.errors, payload.code, payload.trace_id);
+  }
   return payload.data as T;
 }

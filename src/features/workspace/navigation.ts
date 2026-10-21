@@ -34,7 +34,7 @@ export const menuGroups: MenuGroup[] = [
   },
   {
     id: 'users',
-    title: '用户管理',
+    title: '账户管理',
     icon: 'user',
     pages: [
       ['userlist', '用户列表'],

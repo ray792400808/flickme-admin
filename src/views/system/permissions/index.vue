@@ -100,8 +100,26 @@
     </div>
 
     <!-- 单条编辑 -->
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑权限' : '新增权限'" width="520px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
+    <el-drawer
+      v-model="dialogVisible"
+      direction="rtl"
+      size="480"
+      class="admin-drawer"
+      :show-close="false"
+      :close-on-click-modal="false"
+      @close="formRef?.clearValidate()"
+    >
+      <template #header="{ close }">
+        <div class="drawer-head">
+          <div>
+            <h2>{{ editing ? '编辑权限' : '新增权限' }}</h2>
+            <p>{{ editing ? `ID ${editing.id}` : '权限码格式为 模块.动作' }}</p>
+          </div>
+          <button class="drawer-close" type="button" aria-label="关闭" @click="close">×</button>
+        </div>
+      </template>
+
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="drawer-form">
         <el-form-item label="上级权限">
           <el-select v-model="form.parent_id" placeholder="不选则为顶级" clearable style="width: 100%">
             <el-option
@@ -133,15 +151,36 @@
           <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="255" />
         </el-form-item>
       </el-form>
+
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submit">确定</el-button>
+        <div class="drawer-foot">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="submit">确定</el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
 
     <!-- 批量生成 -->
-    <el-dialog v-model="batchVisible" title="批量生成权限" width="520px">
-      <el-form ref="batchRef" :model="batchForm" :rules="batchRules" label-width="90px">
+    <el-drawer
+      v-model="batchVisible"
+      direction="rtl"
+      size="480"
+      class="admin-drawer"
+      :show-close="false"
+      :close-on-click-modal="false"
+      @close="batchRef?.clearValidate()"
+    >
+      <template #header="{ close }">
+        <div class="drawer-head">
+          <div>
+            <h2>批量生成权限</h2>
+            <p>按模块前缀一次创建常用动作权限</p>
+          </div>
+          <button class="drawer-close" type="button" aria-label="关闭" @click="close">×</button>
+        </div>
+      </template>
+
+      <el-form ref="batchRef" :model="batchForm" :rules="batchRules" label-position="top" class="drawer-form">
         <el-form-item label="模块标识" prop="module">
           <el-input v-model="batchForm.module" placeholder="如：drama" />
           <div class="hint">英文小写，作为权限码前缀</div>
@@ -156,7 +195,7 @@
         </el-form-item>
       </el-form>
 
-      <div v-if="batchPreview.length" class="banner" style="margin: 0 0 4px">
+      <div v-if="batchPreview.length" class="banner">
         <div style="display: flex; flex-direction: column; gap: 2px">
           <b>将创建 {{ batchPreview.length }} 条权限：</b>
           <span v-for="c in batchPreview" :key="c" class="code">{{ c }}</span>
@@ -164,10 +203,12 @@
       </div>
 
       <template #footer>
-        <el-button @click="batchVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submitBatch">生成</el-button>
+        <div class="drawer-foot">
+          <el-button @click="batchVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="submitBatch">生成</el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
@@ -266,7 +307,7 @@ const form = reactive({
   parent_id: null as number | null,
   name: '',
   code: '',
-  type: 3,
+  type: 3 as AdminPermission['type'],
   sort: 0,
   remark: '',
 });
@@ -422,5 +463,9 @@ onMounted(load);
   color: var(--muted);
   line-height: 1.6;
   margin-top: 2px;
+}
+
+.drawer-form :deep(.el-form-item) {
+  margin-bottom: 18px;
 }
 </style>

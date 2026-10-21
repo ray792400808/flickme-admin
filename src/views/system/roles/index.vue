@@ -56,7 +56,7 @@
               <td class="text-muted">{{ row.description || '—' }}</td>
               <td class="num">{{ row.users_count }}</td>
               <td class="num">{{ row.permissions_count ?? '—' }}</td>
-              <td class="mono">{{ formatDate(row.created_at) }}</td>
+              <td class="mono">{{ formatUnix(row.created_at) }}</td>
               <td>
                 <span class="row-actions">
                   <button
@@ -105,6 +105,7 @@ import type { Role } from '../../../types/auth';
 import { useAuthStore } from '../../../stores/auth';
 import TablePager from '../../../components/common/TablePager.vue';
 import RoleEditDialog from './components/RoleEditDialog.vue';
+import { formatUnix } from '../../../utils/datetime';
 
 const auth = useAuthStore();
 
@@ -120,11 +121,6 @@ const queryForm = reactive({
 
 const editDialogVisible = ref(false);
 const currentRole = ref<Role | null>(null);
-
-function formatDate(iso: string): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString('zh-CN', { hour12: false });
-}
 
 async function loadData() {
   loading.value = true;

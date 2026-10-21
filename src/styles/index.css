@@ -55,15 +55,24 @@ p {
   margin: 0;
 }
 
-/* ── 通用页面容器 ── */
+/* ── 通用页面容器 ──
+   对齐 prototype #view{padding:24px;max-width:1360px;width:100%}
+   刻意不加 margin:0 auto —— 原型内容靠左对齐侧栏，居中会在固定侧栏右侧留出大片空白 */
 .page {
   padding: 24px;
   max-width: 1360px;
-  margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 .page .ph {
   margin-bottom: 18px;
+}
+
+/* 对齐 prototype @media(max-width:900px){ #view{padding:16px} } */
+@media (max-width: 900px) {
+  .page {
+    padding: 16px;
+  }
 }
 
 /* ── 通用工具 ── */
