@@ -5,6 +5,7 @@
 @import './shell.css';
 @import './components.css';
 @import './operations-reference.css';
+@import './tasks.css';
 @import './content.css';
 
 * {

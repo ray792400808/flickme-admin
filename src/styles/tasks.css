@@ -1,0 +1,27 @@
+.task-page .task-pagination,
+.task-page .task-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+}
+.task-page .task-pagination > span {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.task-page .task-version {
+  color: var(--muted);
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.task-page .banner.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+.task-page input[type='checkbox'] {
+  accent-color: var(--accent);
+}
