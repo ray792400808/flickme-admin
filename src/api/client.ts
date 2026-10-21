@@ -85,7 +85,12 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
-export async function requestApi<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export async function requestApi<T>(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  extraHeaders: Record<string, string> = {},
+): Promise<T> {
   // 每次发请求时从 localStorage 读最新 token（MCP 浏览器每次导航模块重新执行）
   const token = readStored();
   // 后端 TraceIdMiddleware 优先读取该头，用于串联「前端 → nginx → php-fpm → 日志」
@@ -96,6 +101,14 @@ export async function requestApi<T>(path: string, method = 'GET', body?: unknown
     response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/admin'}${path}`, {
       method,
       headers: {
+        ...Object.fromEntries(
+          Object.entries(extraHeaders).filter(
+            ([name]) =>
+              !['authorization', 'trace-id', 'x-trace-id', 'accept', 'content-type'].includes(
+                name.toLowerCase(),
+              ),
+          ),
+        ),
         Accept: 'application/json',
         'Trace-Id': traceId,
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
@@ -140,7 +153,13 @@ export async function requestApi<T>(path: string, method = 'GET', body?: unknown
   // 后端保证失败时不会用 2xx；但如果将来某个接口返回 code !== 200，这里兜住。
   // code 缺省（老接口 / 探针）时按成功处理。
   if (typeof payload.code === 'number' && payload.code !== 200) {
-    throw new ApiError(payload.message || '请求失败', response.status, payload.data?.errors, payload.code, payload.trace_id);
+    throw new ApiError(
+      payload.message || '请求失败',
+      response.status,
+      payload.data?.errors,
+      payload.code,
+      payload.trace_id,
+    );
   }
   return payload.data as T;
 }

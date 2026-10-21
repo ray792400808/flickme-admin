@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
 import { useTaskConfig } from '../../composables/useTaskConfig';
-import { watchPrototype } from '../../features/tasks/prototype';
 import TaskConfigStatus from '../../components/tasks/TaskConfigStatus.vue';
-const c = reactive(useTaskConfig('watch', watchPrototype));
+const c = reactive(useTaskConfig('watch'));
 </script>
 <template>
   <div class="op-page task-page">
@@ -20,11 +19,11 @@ const c = reactive(useTaskConfig('watch', watchPrototype));
       v-bind="c"
       :revision="c.document?.revision"
       :published-revision="c.document?.published_revision"
-      @publish="c.publish"
-      @cancel="c.publishOpen = false"
+      :published-at="c.document?.published_at"
       @reload="c.load"
     />
     <form class="card" @submit.prevent="c.save">
+      <p class="task-version sec">保存后立即生效，无需单独发布。本页只配置规则，不执行奖励入账。</p>
       <section class="sec">
         <h3>实时奖励</h3>
         <p>
@@ -39,6 +38,7 @@ const c = reactive(useTaskConfig('watch', watchPrototype));
               class="in"
               type="number"
               min="1"
+              max="86400"
               step="1"
               required /></label
           ><label for="watch-coins"
@@ -47,7 +47,8 @@ const c = reactive(useTaskConfig('watch', watchPrototype));
               v-model.number="c.draft.coins"
               class="in"
               type="number"
-              min="0"
+              min="1"
+              max="1000000"
               step="1"
               required /></label
           ><label for="watch-cap"
@@ -56,7 +57,8 @@ const c = reactive(useTaskConfig('watch', watchPrototype));
               v-model.number="c.draft.cap"
               class="in"
               type="number"
-              min="0"
+              :min="c.draft.coins || 1"
+              max="1000000"
               step="1"
               required
           /></label>
@@ -64,15 +66,7 @@ const c = reactive(useTaskConfig('watch', watchPrototype));
       </section>
       <div class="task-form-actions">
         <button class="btn" type="button" :disabled="!c.editable" @click="c.reset">还原</button
-        ><button class="btn" :disabled="!c.canSave">保存草稿</button
-        ><button
-          class="btn pri"
-          type="button"
-          :disabled="!c.canPublish"
-          @click="c.publishOpen = true"
-        >
-          发布
-        </button>
+        ><button class="btn pri" :disabled="!c.canSave">保存并生效</button>
       </div>
     </form>
   </div>

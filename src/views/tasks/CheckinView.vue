@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useTaskConfig } from '../../composables/useTaskConfig';
-import { checkinPrototype } from '../../features/tasks/prototype';
 import { nonnegative, type CheckinReward } from '../../types/tasks';
 import TaskConfigStatus from '../../components/tasks/TaskConfigStatus.vue';
 import FormDrawer from '../../components/common/FormDrawer.vue';
-const c = reactive(useTaskConfig('checkin', checkinPrototype));
+const c = reactive(useTaskConfig('checkin'));
 const search = ref(''),
   open = ref(false),
   error = ref('');
-const row = ref<CheckinReward>({ id: '', day: 1, reward: 0 });
+const row = ref<CheckinReward>({ id: '', day: '', reward: 0 });
+watch(open, (value) => {
+  c.localEditing = value;
+});
 const rows = computed(() =>
-  c.draft.filter((r) => `Day ${r.day}`.toLowerCase().includes(search.value.toLowerCase())),
+  c.draft.filter((r) => r.day.toLowerCase().includes(search.value.toLowerCase())),
 );
 function edit(value: CheckinReward) {
   row.value = { ...value };
@@ -20,8 +22,8 @@ function edit(value: CheckinReward) {
 }
 function apply() {
   if (!c.editable) return;
-  if (!nonnegative(row.value.reward)) {
-    error.value = '奖励金币必须为非负整数';
+  if (!nonnegative(row.value.reward) || row.value.reward > 1000000) {
+    error.value = '奖励金币必须为 0～1,000,000 的整数';
     return;
   }
   const index = c.draft.findIndex((r) => r.id === row.value.id);
@@ -47,6 +49,7 @@ function apply() {
       v-bind="c"
       :revision="c.document?.revision"
       :published-revision="c.document?.published_revision"
+      :published-at="c.document?.published_at"
       @publish="c.publish"
       @cancel="c.publishOpen = false"
       @reload="c.load"
@@ -69,7 +72,7 @@ function apply() {
           </thead>
           <tbody>
             <tr v-for="item in rows" :key="item.id">
-              <td>Day {{ item.day }}</td>
+              <td>{{ item.day }}</td>
               <td class="num">+{{ item.reward }}</td>
               <td>
                 <button class="btn sm" :disabled="!c.editable" @click="edit(item)">编辑</button>
@@ -86,12 +89,12 @@ function apply() {
       reference
       :open="open"
       title="编辑签到奖励"
-      :subtitle="'Day ' + row.day"
+      :subtitle="row.day"
       @close="open = false"
       ><form id="checkin-form" class="op-form" @submit.prevent="apply">
         <div class="fld">
           <label for="checkin-day">天数</label
-          ><input id="checkin-day" class="in" :value="'Day ' + row.day" readonly />
+          ><input id="checkin-day" class="in" :value="row.day" readonly />
         </div>
         <div class="fld">
           <label for="checkin-reward">奖励金币</label
@@ -101,6 +104,7 @@ function apply() {
             class="in"
             type="number"
             min="0"
+            max="1000000"
             step="1"
             required
           />
@@ -110,7 +114,7 @@ function apply() {
       <template #footer
         ><button class="btn" @click="open = false">取消</button
         ><button class="btn pri" form="checkin-form" :disabled="!c.editable">
-          {{ c.preview ? '应用到预览' : '应用到草稿' }}
+          应用到草稿
         </button></template
       ></FormDrawer
     >

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useTaskConfig } from '../../composables/useTaskConfig';
-import { taskPrototype } from '../../features/tasks/prototype';
 import { validateTask, type RewardTask } from '../../types/tasks';
 import TaskConfigStatus from '../../components/tasks/TaskConfigStatus.vue';
 import FormDrawer from '../../components/common/FormDrawer.vue';
-const c = reactive(useTaskConfig('taskcfg', taskPrototype));
+import ConfirmDialog from '../../components/common/ConfirmDialog.vue';
+const c = reactive(useTaskConfig('taskcfg'));
+const deleting = ref<RewardTask | null>(null);
 const groups = ['新手任务', '观看任务', '日常任务'] as const;
 const search = ref(''),
   group = ref(''),
@@ -14,7 +15,7 @@ const search = ref(''),
   error = ref(''),
   isNew = ref(false);
 const blank = (): RewardTask => ({
-  id: crypto.randomUUID(),
+  id: '',
   group: '日常任务',
   name: '',
   reward: 5,
@@ -42,13 +43,33 @@ const filtered = computed(() =>
 const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / 8)));
 const rows = computed(() => filtered.value.slice((page.value - 1) * 8, page.value * 8));
 watch([search, group], () => (page.value = 1));
+watch(pages, (value) => {
+  page.value = Math.min(page.value, value);
+});
+watch(open, (value) => {
+  if (!value) c.localEditing = false;
+});
+watch(
+  () => c.document?.revision,
+  () => {
+    if (c.message === '') open.value = false;
+  },
+);
+function groupChanged() {
+  row.value.reset = row.value.group === '新手任务' ? '一次性' : '每日';
+  if (row.value.group !== '观看任务') {
+    delete row.value.sec;
+    row.value.name = '';
+  }
+}
 function edit(item?: RewardTask) {
   isNew.value = !item;
   row.value = item ? { ...item } : blank();
   error.value = '';
   open.value = true;
+  c.localEditing = true;
 }
-function apply() {
+async function apply() {
   if (!c.editable) return;
   const value = { ...row.value, name: row.value.name.trim() };
   if (value.group === '观看任务')
@@ -56,12 +77,17 @@ function apply() {
   else delete value.sec;
   error.value = validateTask('taskcfg', [value]);
   if (error.value) return;
-  if (isNew.value) c.draft.push(value);
-  else {
-    const index = c.draft.findIndex((r) => r.id === value.id);
-    if (index >= 0) c.draft[index] = value;
-  }
-  open.value = false;
+  if (await c.saveTask(value, isNew.value ? undefined : value.id)) open.value = false;
+  else error.value = c.error;
+}
+async function remove() {
+  if (deleting.value && (await c.deleteTask(deleting.value.id))) deleting.value = null;
+}
+async function toggle(item: RewardTask, event: Event) {
+  const input = event.target as HTMLInputElement;
+  const value = input.checked;
+  input.checked = item.en;
+  await c.toggleTask(item.id, value);
 }
 </script>
 <template>
@@ -76,7 +102,6 @@ function apply() {
       </div>
       <div class="act">
         <button class="btn" :disabled="!c.editable" @click="edit()">新增任务</button
-        ><button class="btn" :disabled="!c.canSave" @click="c.save">保存草稿</button
         ><button class="btn pri" :disabled="!c.canPublish" @click="c.publishOpen = true">
           发布
         </button>
@@ -86,16 +111,20 @@ function apply() {
       v-bind="c"
       :revision="c.document?.revision"
       :published-revision="c.document?.published_revision"
+      :published-at="c.document?.published_at"
       @publish="c.publish"
       @cancel="c.publishOpen = false"
       @reload="c.load"
     />
     <div class="card">
       <div class="tb">
-        <input v-model="search" type="search" placeholder="搜索任务" aria-label="搜索任务" /><select
-          v-model="group"
-          aria-label="任务分组"
-        >
+        <input
+          v-model="search"
+          type="search"
+          maxlength="100"
+          placeholder="搜索任务"
+          aria-label="搜索任务"
+        /><select v-model="group" aria-label="任务分组">
           <option value="">分组：全部</option>
           <option v-for="g in groups" :key="g">{{ g }}</option></select
         ><span class="n">共 {{ filtered.length }} 条</span>
@@ -122,7 +151,8 @@ function apply() {
               <td>{{ item.reset }}</td>
               <td>
                 <input
-                  v-model="item.en"
+                  :checked="item.en"
+                  @change="toggle(item, $event)"
                   type="checkbox"
                   role="switch"
                   :aria-label="item.name + '启用'"
@@ -131,6 +161,9 @@ function apply() {
               </td>
               <td>
                 <button class="btn sm" :disabled="!c.editable" @click="edit(item)">编辑</button>
+                <button class="btn sm dg" :disabled="!c.editable" @click="deleting = item">
+                  删除
+                </button>
               </td>
             </tr>
             <tr v-if="!rows.length">
@@ -149,67 +182,90 @@ function apply() {
       reference
       :open="open"
       :title="isNew ? '新增任务' : '编辑任务'"
+      :busy="c.busy"
       @close="open = false"
-      ><form id="task-form" class="op-form" @submit.prevent="apply">
-        <div class="fld">
-          <label for="task-group">分组</label
-          ><select id="task-group" v-model="row.group" class="in">
-            <option v-for="g in groups" :key="g">{{ g }}</option>
-          </select>
-        </div>
-        <div class="fld">
-          <label for="task-name">任务名称</label
-          ><input
-            id="task-name"
-            v-model="row.name"
-            class="in"
-            :readonly="row.group === '观看任务'"
-            :required="row.group !== '观看任务'"
-            maxlength="200"
-          /><span v-if="row.group === '观看任务'" class="hint"
-            >观看任务的名称随累计秒数自动生成</span
-          >
-        </div>
-        <div v-if="row.group === '观看任务'" class="fld">
-          <label for="task-sec">累计播放秒数</label
-          ><input
-            id="task-sec"
-            v-model.number="row.sec"
-            class="in"
-            type="number"
-            min="1"
-            step="1"
-            required
-          /><span class="hint">按用户当日累计有效播放秒数结算，前台显示为分钟</span>
-        </div>
-        <div class="fld">
-          <label for="task-reward">奖励金币</label
-          ><input
-            id="task-reward"
-            v-model.number="row.reward"
-            class="in"
-            type="number"
-            min="0"
-            step="1"
-            required
-          />
-        </div>
-        <div class="fld">
-          <label for="task-reset">重置周期</label
-          ><select id="task-reset" v-model="row.reset" class="in">
-            <option>一次性</option>
-            <option>每日</option>
-          </select>
-        </div>
-        <label><input v-model="row.en" type="checkbox" /> 启用</label>
-        <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+      ><form id="task-form" @submit.prevent="apply">
+        <fieldset class="op-form task-editor-fields" :disabled="!c.editable">
+          <div class="fld">
+            <label for="task-group">分组</label
+            ><select
+              id="task-group"
+              v-model="row.group"
+              class="in"
+              :disabled="c.busy"
+              @change="groupChanged"
+            >
+              <option v-for="g in groups" :key="g">{{ g }}</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label for="task-name">任务名称</label
+            ><input
+              id="task-name"
+              v-model="row.name"
+              class="in"
+              :readonly="row.group === '观看任务'"
+              :required="row.group !== '观看任务'"
+              maxlength="200"
+            /><span v-if="row.group === '观看任务'" class="hint"
+              >观看任务的名称随累计秒数自动生成</span
+            >
+          </div>
+          <div v-if="row.group === '观看任务'" class="fld">
+            <label for="task-sec">累计播放秒数</label
+            ><input
+              id="task-sec"
+              v-model.number="row.sec"
+              class="in"
+              type="number"
+              min="1"
+              max="86400"
+              step="1"
+              required
+            /><span class="hint">按用户当日累计有效播放秒数结算，前台显示为分钟</span>
+          </div>
+          <div class="fld">
+            <label for="task-reward">奖励金币</label
+            ><input
+              id="task-reward"
+              v-model.number="row.reward"
+              class="in"
+              type="number"
+              min="0"
+              max="1000000"
+              step="1"
+              required
+            />
+          </div>
+          <div class="fld">
+            <label for="task-reset">重置周期</label
+            ><select id="task-reset" v-model="row.reset" class="in">
+              <option>一次性</option>
+              <option>每日</option>
+            </select>
+          </div>
+          <label><input v-model="row.en" type="checkbox" /> 启用</label>
+          <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+        </fieldset>
       </form>
       <template #footer
-        ><button class="btn" @click="open = false">取消</button
+        ><button class="btn" :disabled="c.busy" @click="open = false">取消</button
         ><button class="btn pri" form="task-form" :disabled="!c.editable">
-          {{ c.preview ? '应用到预览' : '应用到草稿' }}
+          保存草稿
         </button></template
       ></FormDrawer
     >
+    <ConfirmDialog
+      :open="!!deleting"
+      title="删除任务"
+      :message="
+        '确认删除任务“' + (deleting?.name ?? '') + '”？删除仅修改草稿，发布后才影响线上配置。'
+      "
+      :busy="c.busy"
+      :error="c.error"
+      confirm-label="删除"
+      @confirm="remove"
+      @cancel="deleting = null"
+    />
   </div>
 </template>
