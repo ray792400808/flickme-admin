@@ -12,3 +12,4 @@
 [1021/120642.837:ERROR:net\base\network_change_notifier_win.cc:224] WSALookupServiceBegin failed with: -1
 [1021/120643.378:ERROR:net\base\network_change_notifier_win.cc:224] WSALookupServiceBegin failed with: -1
 [1021/120731.615:ERROR:net\base\network_change_notifier_win.cc:224] WSALookupServiceBegin failed with: -1
+[1021/142008.975:ERROR:net\base\network_change_notifier_win.cc:224] WSALookupServiceBegin failed with: -1

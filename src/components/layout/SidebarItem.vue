@@ -1,8 +1,8 @@
 <template>
   <!-- 有子菜单的分组 -->
-  <div v-if="hasChildren" class="ng" :class="{ open: isOpen }">
-    <button class="nav-group" @click="toggle">
-      <el-icon v-if="item.icon"><component :is="resolveIcon(item.icon)" /></el-icon>
+  <div v-if="hasChildren" class="ng" :class="{ open: isOpen, cur: isCurrent }">
+    <button class="nav-group" :aria-expanded="isOpen" @click="toggle">
+      <MenuIcon class="nav-icon" :name="item.icon" :title="item.meta.title" />
       <span>{{ item.meta.title }}</span>
       <svg class="ch" viewBox="0 0 24 24">
         <path d="M9 6l6 6-6 6" />
@@ -17,38 +17,23 @@
         active-class="on"
         @click="$emit('navigate')"
       >
-        <el-icon v-if="child.icon"><component :is="resolveIcon(child.icon)" /></el-icon>
         <span>{{ child.meta.title }}</span>
       </RouterLink>
     </div>
   </div>
 
   <!-- 叶子菜单项 -->
-  <RouterLink
-    v-else
-    :to="item.path"
-    class="ni"
-    active-class="on"
-    @click="$emit('navigate')"
-  >
-    <el-icon v-if="item.icon"><component :is="resolveIcon(item.icon)" /></el-icon>
+  <RouterLink v-else :to="item.path" class="ni" active-class="on" @click="$emit('navigate')">
+    <MenuIcon class="nav-icon" :name="item.icon" :title="item.meta.title" />
     <span>{{ item.meta.title }}</span>
   </RouterLink>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import * as ElementPlusIconsVue from '@element-plus/icons-vue';
+import MenuIcon from './MenuIcon.vue';
 import type { Menu } from '../../types/auth';
-
-// icon 名字 → Element Plus 图标组件
-const iconCache: Record<string, unknown> = {};
-function resolveIcon(name: string | null) {
-  if (!name) return undefined;
-  if (!iconCache[name]) iconCache[name] = ElementPlusIconsVue[name as keyof typeof ElementPlusIconsVue];
-  return iconCache[name];
-}
 
 const props = defineProps<{ item: Menu }>();
 defineEmits<{ navigate: [] }>();
@@ -56,15 +41,23 @@ defineEmits<{ navigate: [] }>();
 const route = useRoute();
 
 // 有可见子节点才渲染分组
-const visibleChildren = computed(() =>
-  (props.item.children ?? []).filter((c) => !c.meta.isHidden)
-);
+const visibleChildren = computed(() => (props.item.children ?? []).filter((c) => !c.meta.isHidden));
 
 const hasChildren = computed(() => visibleChildren.value.length > 0);
+const isCurrent = computed(() =>
+  visibleChildren.value.some(
+    (child) =>
+      route.path === child.path || route.path.startsWith(child.path.replace(/\/$/, '') + '/'),
+  ),
+);
 
 // 路由激活时自动展开分组
-const isOpen = ref(
-  hasChildren.value && visibleChildren.value.some((c) => route.path.startsWith(c.path))
+const isOpen = ref(isCurrent.value);
+watch(
+  () => route.path,
+  () => {
+    if (isCurrent.value) isOpen.value = true;
+  },
 );
 
 function toggle() {
@@ -200,5 +193,17 @@ function toggle() {
 .ni span,
 .nav-group span {
   flex: 1;
+}
+.nav-icon {
+  color: var(--muted);
+}
+.ni.on .nav-icon,
+.ng.cur > .nav-group,
+.ng.cur > .nav-group .nav-icon,
+.ng.cur > .nav-group .ch {
+  color: var(--accent);
+}
+.ng.cur > .nav-group .ch {
+  stroke: currentColor;
 }
 </style>
