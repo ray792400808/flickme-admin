@@ -409,14 +409,24 @@ tbody tr:hover td {
 .page-heading {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
   gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
 }
-.page-heading h1,
-.page-heading h2 {
-  font-size: 18px;
+.page-heading h1 {
+  font-size: 20px;
   font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.page-heading h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.page-heading p {
+  color: var(--muted);
+  margin-top: 2px;
+  max-width: 70ch;
 }
 .page-heading select {
   height: 32px;

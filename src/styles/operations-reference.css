@@ -936,6 +936,22 @@
   font-size: 12.5px;
   white-space: nowrap;
 }
+:is(.op-page, .op-drawer) .phone .ch2 {
+  overflow-x: auto;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x pan-y;
+}
+:is(.op-page, .op-drawer) .phone .ch2::-webkit-scrollbar {
+  display: none;
+}
+:is(.op-page, .op-drawer) .phone .ch2.is-dragging {
+  cursor: grabbing;
+}
+:is(.op-page, .op-drawer) .phone .ch2 > * {
+  flex-shrink: 0;
+}
 :is(.op-page, .op-drawer) .phone .ch2 b {
   color: #ff4d63;
   font-weight: 600;
@@ -1308,5 +1324,6 @@
   cursor: not-allowed;
 }
 .op-drawer .native-drawer-body .form-error {
+  color: var(--bad);
   margin-top: 10px;
 }

@@ -5,6 +5,7 @@
 @import './shell.css';
 @import './components.css';
 @import './operations-reference.css';
+@import './content.css';
 
 * {
   box-sizing: border-box;
@@ -81,6 +82,9 @@ p {
 }
 .text-muted {
   color: var(--muted);
+}
+.form-error {
+  color: var(--bad);
 }
 .mb-12 {
   margin-bottom: 12px;
