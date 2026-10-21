@@ -25,6 +25,17 @@ export const router = createRouter({
  * 统一补成 `views/system/users/index` 后查表。
  */
 const componentMap: Record<string, () => Promise<unknown>> = {
+  'views/tasks/CheckinView': () => import('../views/tasks/CheckinView.vue'),
+  'views/tasks/TaskConfigView': () => import('../views/tasks/TaskConfigView.vue'),
+  'views/tasks/WatchRewardsView': () => import('../views/tasks/WatchRewardsView.vue'),
+  'views/operations/HomeCategoriesView': () => import('../views/operations/HomeCategoriesView.vue'),
+  'views/operations/HotPoolView': () => import('../views/operations/HotPoolView.vue'),
+  'views/operations/LaunchPopupView': () => import('../views/operations/LaunchPopupView.vue'),
+  'views/operations/SearchWordsView': () => import('../views/operations/SearchWordsView.vue'),
+  'views/operations/StoryFiltersView': () => import('../views/operations/StoryFiltersView.vue'),
+  'views/operations/RecommendationsView': () => import('../views/operations/RecommendationsView.vue'),
+  'views/users/UserListView': () => import('../views/users/UserListView.vue'),
+  'views/users/CoinAdjustmentsView': () => import('../views/users/CoinAdjustmentsView.vue'),
   'views/dashboard/index': () => import('../views/dashboard/index.vue'),
   'views/dramas/index': () => import('../views/dramas/index.vue'),
   'views/characters/index': () => import('../views/characters/index.vue'),

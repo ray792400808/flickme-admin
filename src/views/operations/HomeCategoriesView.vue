@@ -11,6 +11,33 @@ import ConfirmDialog from '../../components/common/ConfirmDialog.vue';
 import { emptyLocalizedText, type Channel, type HomeCategory } from '../../types/operations';
 import { validateOperations } from '../../utils/operations';
 const channel = ref<Channel>('short');
+const previewDragging = ref(false);
+let previewPointer: number | null = null;
+let previewStartX = 0;
+let previewStartScroll = 0;
+function startPreviewDrag(event: PointerEvent) {
+  if (event.pointerType !== 'mouse' || event.button !== 0) return;
+  const strip = event.currentTarget as HTMLElement;
+  if (strip.scrollWidth <= strip.clientWidth) return;
+  previewPointer = event.pointerId;
+  previewStartX = event.clientX;
+  previewStartScroll = strip.scrollLeft;
+  previewDragging.value = true;
+  strip.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+function movePreviewDrag(event: PointerEvent) {
+  if (previewPointer !== event.pointerId) return;
+  const strip = event.currentTarget as HTMLElement;
+  strip.scrollLeft = previewStartScroll - (event.clientX - previewStartX);
+}
+function endPreviewDrag(event: PointerEvent) {
+  if (previewPointer !== event.pointerId) return;
+  previewPointer = null;
+  previewDragging.value = false;
+  const strip = event.currentTarget as HTMLElement;
+  if (strip.hasPointerCapture(event.pointerId)) strip.releasePointerCapture(event.pointerId);
+}
 const c = reactive(useOperationsConfig('chips', () => [], channel));
 const e = reactive(
   useConfigEditor<HomeCategory>(toRef(c, 'draft'), () => ({
@@ -165,7 +192,17 @@ async function publish() {
             <template v-if="channel === 'short'">Short <span>Stories</span></template
             ><template v-else><span>Short</span> Stories</template>
           </div>
-          <div class="ch2">
+          <div
+            class="ch2"
+            :class="{ 'is-dragging': previewDragging }"
+            tabindex="0"
+            aria-label="分类标签，可按住鼠标左右拖动"
+            @pointerdown="startPreviewDrag"
+            @pointermove="movePreviewDrag"
+            @pointerup="endPreviewDrag"
+            @pointercancel="endPreviewDrag"
+            @lostpointercapture="endPreviewDrag"
+          >
             <template v-for="(row, index) in c.draft.filter((row) => row.enabled)" :key="row.id"
               ><b v-if="!index">{{ row.names.en }}</b
               ><i v-else>{{ row.names.en }}</i></template
