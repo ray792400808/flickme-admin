@@ -97,12 +97,12 @@
 .tw {
   overflow-x: auto;
 }
-table {
+table:not([class*='el-']) {
   border-collapse: collapse;
   width: 100%;
   min-width: 640px;
 }
-th {
+table:not([class*='el-']) th {
   font-weight: 500;
   color: var(--muted);
   font-size: 12px;
@@ -112,15 +112,15 @@ th {
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
-td {
+table:not([class*='el-']) td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
-tbody tr:last-child td {
+table:not([class*='el-']) tbody tr:last-child td {
   border-bottom: 0;
 }
-tbody tr:hover td {
+table:not([class*='el-']) tbody tr:hover td {
   background: var(--surface2);
 }
 

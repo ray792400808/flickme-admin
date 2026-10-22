@@ -435,12 +435,12 @@
 :is(.op-page, .op-drawer) .tw {
   overflow-x: auto;
 }
-:is(.op-page, .op-drawer) table {
+:is(.op-page, .op-drawer) table:not([class*='el-']) {
   border-collapse: collapse;
   width: 100%;
   min-width: 640px;
 }
-:is(.op-page, .op-drawer) th {
+:is(.op-page, .op-drawer) table:not([class*='el-']) th {
   font-weight: 500;
   color: var(--muted);
   font-size: 12px;
@@ -450,12 +450,12 @@
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
-:is(.op-page, .op-drawer) td {
+:is(.op-page, .op-drawer) table:not([class*='el-']) td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
-:is(.op-page, .op-drawer) tbody tr:last-child td {
+:is(.op-page, .op-drawer) table:not([class*='el-']) tbody tr:last-child td {
   border-bottom: 0;
 }
 :is(.op-page, .op-drawer) tbody tr.rw {

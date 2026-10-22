@@ -1,60 +1,56 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
+import { ElDatePicker } from 'element-plus';
 const model = defineModel<number | null>({ required: true });
 defineProps<{ label: string; disabled?: boolean }>();
-const value = computed(() => {
-  if (model.value == null) return '';
-  const d = new Date(model.value * 1000);
-  if (!Number.isFinite(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    d.getFullYear() +
-    '-' +
-    pad(d.getMonth() + 1) +
-    '-' +
-    pad(d.getDate()) +
-    ' ' +
-    pad(d.getHours()) +
-    ':' +
-    pad(d.getMinutes())
-  );
-});
-function change(event: Event) {
-  const input = event.target as HTMLInputElement,
-    text = input.value.trim();
-  input.setCustomValidity('');
-  if (!text) {
-    model.value = null;
-    return;
-  }
-  const match = text.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/);
-  if (match) {
-    const [, y, m, d, h, min] = match.map(Number);
-    const date = new Date(y!, m! - 1, d!, h!, min!);
-    if (
-      date.getFullYear() === y &&
-      date.getMonth() === m! - 1 &&
-      date.getDate() === d &&
-      date.getHours() === h &&
-      date.getMinutes() === min
-    ) {
-      model.value = Math.floor(date.getTime() / 1000);
+const id = useId();
+const value = computed<Date | null>({
+  get() {
+    if (model.value == null) return null;
+    const date = new Date(model.value * 1000);
+    return Number.isFinite(date.getTime()) ? date : null;
+  },
+  set(date) {
+    if (!date || !Number.isFinite(date.getTime())) {
+      model.value = null;
       return;
     }
-  }
-  input.setCustomValidity('请输入有效的 YYYY-MM-DD HH:mm 时间');
-}
+    const selected = new Date(date);
+    selected.setSeconds(0, 0);
+    model.value = Math.floor(selected.getTime() / 1000);
+  },
+});
 </script>
 <template>
-  <div class="fld">
-    <label>{{ label }}</label
-    ><input
-      class="in"
-      :aria-label="label"
-      :value="value"
-      :readonly="disabled"
-      placeholder="YYYY-MM-DD HH:mm"
-      @change="change"
+  <div class="fld date-time-field">
+    <label :for="id">{{ label }}</label>
+    <ElDatePicker
+      :id="id"
+      v-model="value"
+      type="datetime"
+      format="YYYY-MM-DD HH:mm"
+      time-format="HH:mm"
+      placeholder="请选择日期和时间"
+      :disabled="disabled"
+      :teleported="false"
+      :popper-options="{ strategy: 'fixed' }"
+      clearable
+      :show-footer="false"
+      :show-confirm="false"
+      :show-now="false"
     />
   </div>
 </template>
+<style scoped>
+.date-time-field :deep(.el-date-editor.el-input) {
+  width: 100%;
+  height: 34px;
+}
+.date-time-field :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  background: var(--surface);
+}
+.date-time-field :deep(.el-input__inner) {
+  font-size: 13px;
+}
+</style>

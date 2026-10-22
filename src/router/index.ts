@@ -25,6 +25,8 @@ export const router = createRouter({
  * 统一补成 `views/system/users/index` 后查表。
  */
 const componentMap: Record<string, () => Promise<unknown>> = {
+  'views/system/ModulePendingView': () => import('../views/system/ModulePendingView.vue'),
+  'views/cands/CandidateListView': () => import('../views/cands/CandidateListView.vue'),
   'views/tasks/CheckinView': () => import('../views/tasks/CheckinView.vue'),
   'views/tasks/TaskConfigView': () => import('../views/tasks/TaskConfigView.vue'),
   'views/tasks/WatchRewardsView': () => import('../views/tasks/WatchRewardsView.vue'),

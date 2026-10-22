@@ -27,7 +27,7 @@
 
         <div class="crumb">
           <template v-for="(c, i) in crumbs" :key="i">
-            <span v-if="i">{{ c }}</span>
+            <span v-if="i < crumbs.length - 1">{{ c }} · </span>
             <b v-else>{{ c }}</b>
           </template>
         </div>
@@ -39,16 +39,12 @@
           </svg>
           <input
             v-model="searchTerm"
-            placeholder="搜索功能，如：用户、角色、权限"
+            placeholder="搜索功能,如 优惠券、Chips"
+            aria-label="搜索功能"
             autocomplete="off"
           />
           <div v-if="searchResults.length" class="res">
-            <button
-              v-for="r in searchResults"
-              :key="r.path"
-              class="search-result"
-              @click="goto(r)"
-            >
+            <button v-for="r in searchResults" :key="r.path" class="search-result" @click="goto(r)">
               <el-icon><component :is="resolveLayoutIcon(r.icon)" /></el-icon>
               <span>{{ r.title }}</span>
               <span class="path mono">{{ r.path }}</span>
@@ -56,17 +52,9 @@
           </div>
         </div>
 
-        <span class="spacer" />
-
-        <span class="api-tag" :class="{ ok: apiOnline, bad: !apiOnline }">
-          <i />
-          {{ apiOnline ? 'API 在线' : 'API 离线' }}
-        </span>
-
         <el-dropdown trigger="click" @command="onCommand">
           <button class="user-trigger" aria-label="账号菜单">
-            <span class="av">{{ (auth.user?.name ?? 'A').charAt(0) }}</span>
-            <span class="uname">{{ auth.user?.name ?? '未登录' }}</span>
+            <span class="uname">{{ currentIdentity }}</span>
             <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6" /></svg>
           </button>
           <template #dropdown>
@@ -87,6 +75,23 @@
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+        <button
+          class="ic theme-toggle"
+          :aria-label="darkTheme ? '切换浅色主题' : '切换深色主题'"
+          :title="darkTheme ? '切换浅色主题' : '切换深色主题'"
+          @click="toggleTheme"
+        >
+          <svg v-if="!darkTheme" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path
+              d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"
+            />
+          </svg>
+        </button>
+        <span class="av" :title="auth.user?.name">{{ (auth.user?.name ?? 'A').charAt(0) }}</span>
       </header>
 
       <main id="view" class="page">
@@ -135,25 +140,55 @@ const router = useRouter();
 const auth = useAuthStore();
 
 const mobileNavOpen = ref(false);
-const apiOnline = ref(false);
+const darkTheme = ref(false);
+try {
+  const saved = localStorage.getItem('flickme_admin_theme');
+  darkTheme.value = saved
+    ? saved === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+} catch {
+  darkTheme.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+document.documentElement.dataset.theme = darkTheme.value ? 'dark' : 'light';
+function toggleTheme() {
+  darkTheme.value = !darkTheme.value;
+  const theme = darkTheme.value ? 'dark' : 'light';
+  document.documentElement.dataset.theme = theme;
+  try {
+    localStorage.setItem('flickme_admin_theme', theme);
+  } catch {
+    /* Theme still works without storage. */
+  }
+}
 
 // icon 名字 → Element Plus 图标组件
 const iconCache: Record<string, unknown> = {};
 function resolveLayoutIcon(name: string | null | undefined) {
   if (!name) return undefined;
-  if (!iconCache[name]) iconCache[name] = ElementPlusIconsVue[name as keyof typeof ElementPlusIconsVue];
+  if (!iconCache[name])
+    iconCache[name] = ElementPlusIconsVue[name as keyof typeof ElementPlusIconsVue];
   return iconCache[name];
 }
 
 // 顶部面包屑：路径切成层级
 const crumbs = computed(() => {
-  const parts = (route.meta.title as string) ?? route.path.replace(/^\//, '').split('/');
-  return (Array.isArray(parts) ? parts : [parts]) as string[];
+  const find = (nodes: typeof auth.menus, parents: string[] = []): string[] | undefined => {
+    for (const node of nodes) {
+      const chain = [...parents, node.meta.title];
+      if (node.path === route.path) return chain;
+      const found = node.children?.length ? find(node.children, chain) : undefined;
+      if (found) return found;
+    }
+  };
+  return find(auth.menus) ?? [String(route.meta.title ?? '运营后台')];
 });
 
 const menuTree = computed(() => auth.menus);
 
 const roleNames = computed(() => auth.user?.roles.map((r) => r.name).join('、'));
+const currentIdentity = computed(() =>
+  auth.user?.is_super_admin ? '超级管理员' : roleNames.value || auth.user?.name || '未登录',
+);
 
 // ────── 搜索 ──────
 const searchTerm = ref('');
@@ -186,16 +221,6 @@ function goto(item: SearchHit) {
   searchTerm.value = '';
   router.push(item.path);
   mobileNavOpen.value = false;
-}
-
-// ────── API 健康检查 ──────
-async function checkHealth() {
-  try {
-    const res = await fetch('/admin/health');
-    apiOnline.value = (await res.json()).data.status === 'ok';
-  } catch {
-    apiOnline.value = false;
-  }
 }
 
 // ────── 修改密码 ──────
@@ -262,7 +287,6 @@ async function onCommand(cmd: string) {
 }
 
 onMounted(() => {
-  checkHealth();
   // 菜单已在 login/refresh 时灌入 auth.menus，此时构建路由最安全
   buildRoutesFromMenus();
 });
@@ -358,6 +382,7 @@ onMounted(() => {
 }
 
 .gs {
+  margin-left: auto;
   position: relative;
   width: 260px;
   max-width: 30vw;
@@ -484,14 +509,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: none;
-  border: 0;
-  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
   outline: none;
 }
 .av {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
@@ -501,7 +530,10 @@ onMounted(() => {
   font-size: 12px;
 }
 .uname {
-  font-size: 13.5px;
+  font-size: 13px;
+}
+.theme-toggle {
+  flex: 0 0 34px;
 }
 .chev {
   width: 14px;
@@ -568,8 +600,15 @@ onMounted(() => {
   .crumb {
     display: none;
   }
+  .user-trigger {
+    max-width: 160px;
+  }
   .uname {
-    display: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .top > .el-dropdown {
+    margin-left: auto;
   }
   .burger {
     display: grid;
