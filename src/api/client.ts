@@ -1,5 +1,15 @@
 const TOKEN_KEY = 'flickme_admin_token';
 const TRACE_KEY = 'flickme_admin_trace_id';
+
+/**
+ * 后端接口前缀。
+ *
+ * 新内容中台（剧库 / 标签与合集 / 角标 / 语言列表）统一挂在 /admin，
+ * 旧版后台接口挂在 /admin/v1 —— 后者只保留给历史脚本，不再由前端调用。
+ * 导出成常量是为了让单元测试直接引用，避免前缀变更后测试里写死字符串而失效。
+ */
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/admin';
+
 let unauthorizedHandler: (() => void) | undefined;
 
 function readStored(): string | null {
@@ -98,7 +108,7 @@ export async function requestApi<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/admin'}${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
         ...Object.fromEntries(

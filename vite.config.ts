@@ -13,12 +13,15 @@ export default defineConfig({
   plugins: [
     vue(),
     AutoImport({
-      resolvers: [ElementPlusResolver()],
+      // importStyle: false —— element-plus/dist/index.css 已在 main.ts 全局引入，
+      // 再按组件引入 style/css 会让 vite 依赖预构建生成一堆 element-plus_es_components_* 资源，
+      // 预构建失效时直接 504 导致页面动态 import 失败（整页白屏）。
+      resolvers: [ElementPlusResolver({ importStyle: false })],
       imports: ['vue', 'vue-router', 'pinia'],
       dts: false,
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver({ importStyle: false })],
       dts: false,
     }),
   ],

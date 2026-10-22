@@ -26,13 +26,31 @@ export const useAuthStore = defineStore('auth', () => {
     return flat.some((m) => m.path === path && !m.is_hidden);
   };
 
-  /** 按钮级权限检查：v-perm="'user.create'" */
-  const can = (...codes: string[]): boolean => {
+  /**
+   * 按钮级权限检查：v-perm="'user.create'"
+   *
+   * 用法：
+   *   can('user.create')             精确匹配
+   *   can('permission.edit', 'permission.delete')  多个权限任一命中即可
+   *   can('content', true)           模块级匹配：拥有 `content.*` 中任意一个权限即可
+   */
+  const can = (...args: Array<string | boolean>): boolean => {
     if (isSuperAdmin.value) return true;
+
+    const allowModuleScope = args.length > 0 && args[args.length - 1] === true;
+    const codes = args.filter((arg): arg is string => typeof arg === 'string');
+
     return codes.some((code) => {
       if (permissions.value.includes(code)) return true;
+
       const [module] = code.split('.');
-      return permissions.value.includes(`${module}.*`);
+      if (permissions.value.includes(`${module}.*`)) return true;
+
+      if (allowModuleScope) {
+        return permissions.value.some((permission) => permission.startsWith(`${code}.`));
+      }
+
+      return false;
     });
   };
 

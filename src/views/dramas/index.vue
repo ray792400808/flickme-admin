@@ -1,4 +1,4 @@
 <script setup lang="ts">
-import ContentWorkspace from '../../components/content/ContentWorkspace.vue';
+import DramasView from '../content/DramasView.vue';
 </script>
-<template><ContentWorkspace kind="dramas" /></template>
+<template><DramasView /></template>

@@ -39,6 +39,10 @@ const componentMap: Record<string, () => Promise<unknown>> = {
   'views/dashboard/index': () => import('../views/dashboard/index.vue'),
   'views/dramas/index': () => import('../views/dramas/index.vue'),
   'views/characters/index': () => import('../views/characters/index.vue'),
+  'views/content/DramasView': () => import('../views/content/DramasView.vue'),
+  'views/content/TagsView': () => import('../views/content/TagsView.vue'),
+  'views/content/BadgesView': () => import('../views/content/BadgesView.vue'),
+  'views/content/LanguagesView': () => import('../views/content/LanguagesView.vue'),
   'views/system/users/index': () => import('../views/system/users/index.vue'),
   'views/system/roles/index': () => import('../views/system/roles/index.vue'),
   'views/system/permissions/index': () => import('../views/system/permissions/index.vue'),
@@ -87,7 +91,7 @@ export function buildRoutesFromMenus(refresh = false): void {
               title: node.meta.title,
               permissionCode: node.permission_code ?? undefined,
             },
-          });
+          } as RouteRecordRaw);
         }
       }
 

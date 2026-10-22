@@ -7,19 +7,7 @@ import {
   resetTraceId,
   setAccessToken,
 } from './client';
-
-/** 项目未安装 jsdom，这里用最小 stub 提供 localStorage / location，够本文件覆盖的用例使用。 */
-function stubBrowser(search = ''): Map<string, string> {
-  const store = new Map<string, string>();
-  vi.stubGlobal('localStorage', {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => void store.set(key, value),
-    removeItem: (key: string) => void store.delete(key),
-    clear: () => store.clear(),
-  });
-  vi.stubGlobal('window', { location: { search } });
-  return store;
-}
+import { stubBrowser } from './testBrowser';
 
 beforeEach(() => stubBrowser());
 
